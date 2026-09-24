@@ -1014,6 +1014,14 @@ func (b *querierBuilder) method(q Query) (querierMethod, error) {
 		return m, fmt.Errorf("query %s: unsupported command %s", q.MethodName, q.Cmd)
 	}
 
+	// The with block encloses loops and yields, so errors raised while the
+	// caller iterates a generator method are wrapped too.
+	if b.conf.EmitQueryErrors {
+		body = []*pyast.Node{poet.With(poet.Node(&pyast.Call{
+			Func: typeRefNode("errors", "_wrap_errors"),
+			Args: []*pyast.Node{poet.Constant(q.MethodName)},
+		}), body...)}
+	}
 	if len(q.Comments) > 0 {
 		m.body = append(m.body, docstringNode(strings.Join(q.Comments, "\n")))
 	}
@@ -1199,6 +1207,15 @@ func Generate(_ context.Context, req *plugin.GenerateRequest) (*plugin.GenerateR
 	files := map[string]struct{}{}
 	for _, q := range queries {
 		files[q.SourceName] = struct{}{}
+	}
+
+	if conf.EmitQueryErrors {
+		for source := range files {
+			if queryFileName(source) == errorsFileName {
+				return nil, fmt.Errorf("query file %s would overwrite %s, which emit_query_errors generates", source, errorsFileName)
+			}
+		}
+		output[errorsFileName] = buildErrorsModule(&tctx)
 	}
 
 	for source := range files {

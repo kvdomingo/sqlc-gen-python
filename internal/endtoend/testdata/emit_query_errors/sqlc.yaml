@@ -10,9 +10,17 @@ sql:
     engine: postgresql
     codegen:
       - plugin: py
-        out: db
+        out: classic
         options:
-          package: db
+          package: classic
           emit_sync_querier: true
           emit_async_querier: true
-          emit_querier_protocol: true
+          emit_query_errors: true
+      - plugin: py
+        out: modern
+        options:
+          package: modern
+          emit_sync_querier: true
+          emit_async_querier: true
+          emit_query_errors: true
+          emit_modern_types: true
