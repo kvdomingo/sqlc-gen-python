@@ -526,6 +526,53 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 	return qs, nil
 }
 
+// filterUnusedStructs keeps the enums and models that a query's params,
+// result or embedded tables refer to, directly or through a model field.
+func filterUnusedStructs(enums []Enum, models []Struct, queries []Query) ([]Enum, []Struct) {
+	keep := map[string]bool{}
+	var visitStruct func(s *Struct)
+	visitStruct = func(s *Struct) {
+		for _, f := range s.Fields {
+			keep[strings.TrimPrefix(f.Type.InnerType, "models.")] = true
+			if f.Embed != nil {
+				keep[f.Embed.Name] = true
+				visitStruct(f.Embed)
+			}
+		}
+	}
+	visitValue := func(v QueryValue) {
+		if v.Struct == nil {
+			keep[strings.TrimPrefix(v.Typ.InnerType, "models.")] = true
+			return
+		}
+		if !v.Emit {
+			keep[v.Struct.Name] = true
+		}
+		visitStruct(v.Struct)
+	}
+	for _, q := range queries {
+		visitValue(q.Ret)
+		for _, a := range q.Args {
+			visitValue(a)
+		}
+	}
+
+	var keptModels []Struct
+	for i := range models {
+		if keep[models[i].Name] {
+			keptModels = append(keptModels, models[i])
+			visitStruct(&models[i])
+		}
+	}
+	var keptEnums []Enum
+	for _, e := range enums {
+		if keep[e.Name] {
+			keptEnums = append(keptEnums, e)
+		}
+	}
+	return keptEnums, keptModels
+}
+
 func moduleNode(version, source string, omitVersion bool) *pyast.Module {
 	mod := &pyast.Module{
 		Body: []*pyast.Node{
@@ -1099,6 +1146,9 @@ func Generate(_ context.Context, req *plugin.GenerateRequest) (*plugin.GenerateR
 	queries, err := buildQueries(conf, req, models)
 	if err != nil {
 		return nil, err
+	}
+	if conf.OmitUnusedStructs {
+		enums, models = filterUnusedStructs(enums, models, queries)
 	}
 
 	tctx := pyTmplCtx{

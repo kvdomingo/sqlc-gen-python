@@ -14,4 +14,12 @@ sql:
         options:
           package: db
           emit_sync_querier: true
-
+          rename:
+            nickname: handle
+options:
+  py:
+    overrides:
+      - db_type: citext
+        py_type: my_lib.CIText
+    rename:
+      nickname: alias
