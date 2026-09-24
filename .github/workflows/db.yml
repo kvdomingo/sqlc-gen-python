@@ -26,12 +26,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.12'
       - name: Install python dependencies
         working-directory: ./examples
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+      - name: Compile generated fixtures
+        run: python -m compileall -q internal/endtoend/testdata
+      - name: Type-check feature matrix fixtures
+        run: |
+          for d in internal/endtoend/testdata/feature_matrix_*; do
+            (cd "$d" && mypy --strict --explicit-package-bases db _check.py)
+          done
       - name: Test python code
         working-directory: ./examples
         env:

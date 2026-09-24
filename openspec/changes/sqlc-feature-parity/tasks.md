@@ -54,8 +54,8 @@
 
 ## 7. Integration, docs, release
 
-- [ ] 7.1 Add the fixtures `testdata/feature_matrix_classic` and `testdata/feature_matrix_modern` (design decision 21), each with a `_check.py`. Verify `make test` passes, and `mypy --strict` passes on both
-- [ ] 7.2 Move the `db` CI job from Python 3.9 to 3.12 (needed to parse the PEP 695 fixtures), and add a step that runs `python -m py_compile` over every `internal/endtoend/testdata/**/*.py` and `mypy --strict` over the two matrix fixtures, and verify it passes locally
+- [x] 7.1 Add the fixtures `testdata/feature_matrix_classic` and `testdata/feature_matrix_modern` (design decision 21), each with a `_check.py`. Verify `make test` passes, and `mypy --strict` passes on both
+- [x] 7.2 Move the `db` CI job from Python 3.9 to 3.12 (needed to parse the PEP 695 fixtures), and add a step that runs `python -m py_compile` over every `internal/endtoend/testdata/**/*.py` and `mypy --strict` over the two matrix fixtures, and verify it passes locally
 - [ ] 7.3 Extend `examples/` with `:copyfrom`, `:batchexec`, `:batchone`, `:batchmany`, and `sqlc.embed()` queries, `emit_query_errors`, and `emit_querier_protocol`. Add pytest cases against Postgres for:
   - lazy batch results
   - unique, foreign-key, and not-null violations raising the typed errors, with `constraint_name`, through psycopg (sync) and asyncpg (async)
