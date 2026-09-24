@@ -7,7 +7,7 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/sdk"
 )
 
-func postgresType(req *plugin.GenerateRequest, col *plugin.Column) string {
+func postgresType(req *plugin.GenerateRequest, conf Config, col *plugin.Column) string {
 	columnType := sdk.DataType(col.Type)
 
 	switch columnType {
@@ -50,9 +50,9 @@ func postgresType(req *plugin.GenerateRequest, col *plugin.Column) string {
 			for _, enum := range schema.Enums {
 				if columnType == enum.Name {
 					if schema.Name == req.Catalog.DefaultSchema {
-						return "models." + modelName(enum.Name, req.Settings)
+						return "models." + pyIdent(enum.Name, conf, className)
 					}
-					return "models." + modelName(schema.Name+"_"+enum.Name, req.Settings)
+					return "models." + pyIdent(schema.Name+"_"+enum.Name, conf, className)
 				}
 			}
 		}

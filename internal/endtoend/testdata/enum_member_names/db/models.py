@@ -3,16 +3,10 @@
 #   sqlc v1.31.1
 import dataclasses
 import enum
-from typing import Optional
 
 
-class BookStatus(enum.StrEnum):
-    AVAILABLE = "available"
-    CHECKED_OUT = "checked_out"
-    OVERDUE = "overdue"
-
-
-class Op(enum.StrEnum):
+class Op(str, enum.Enum):
+    """Operators with "quoted" names"""
     VALUE_1 = "="
     VALUE_2 = "<>"
     IN_PROGRESS = "in-progress"
@@ -20,13 +14,6 @@ class Op(enum.StrEnum):
     VALUE_1ST = "1st"
     SAYHI = "say \"hi\""
     BACKSLASH = "back\\slash"
-
-
-@dataclasses.dataclass()
-class Book:
-    id: int
-    title: str
-    status: Optional[BookStatus]
 
 
 @dataclasses.dataclass()

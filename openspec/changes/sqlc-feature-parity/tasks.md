@@ -17,10 +17,10 @@
 
 ## 3. Identifiers and enums
 
-- [ ] 3.1 Add the `pyIdent` helper (rename lookup, then keyword escaping using the Python 3.12 hard keywords) and unit tests for `from`→`from_`, `match` unchanged, and rename applied before escaping
-- [ ] 3.2 Route field names, param names, method names, and model and enum class names through `pyIdent`, and compare against the escaped name in the model-reuse check. Verify with a new fixture `testdata/python_keywords` (a column `from`, a param `class`) whose generated modules pass `python -m py_compile`
-- [ ] 3.3 Post-process enum member names (`VALUE_<n>` for empty names, a `VALUE_` prefix for a leading digit, `_2`… for duplicates). Verify with a new fixture `testdata/enum_member_names` that covers `=`, `<>`, `in-progress`/`in_progress`, `1st`, and `say "hi"`, and extend the existing `emit_str_enum` fixture with the same values
-- [ ] 3.4 Add a fixture `testdata/empty_params_class` (`query_parameter_limit: 0` with a no-param query) and a fixture `testdata/multiline_comments` (multi-line table and column comments). Verify `make test` passes and the outputs `py_compile`
+- [x] 3.1 Add the `pyIdent` helper (rename lookup, then keyword escaping using the Python 3.12 hard keywords) and unit tests for `from`→`from_`, `match` unchanged, and rename applied before escaping
+- [x] 3.2 Route field names, param names, method names, and model and enum class names through `pyIdent`, and compare against the escaped name in the model-reuse check. Verify with a new fixture `testdata/python_keywords` (a column `from`, a param `class`) whose generated modules pass `python -m py_compile`
+- [x] 3.3 Post-process enum member names (`VALUE_<n>` for empty names, a `VALUE_` prefix for a leading digit, `_2`… for duplicates). Verify with a new fixture `testdata/enum_member_names` that covers `=`, `<>`, `in-progress`/`in_progress`, `1st`, and `say "hi"`, and extend the existing `emit_str_enum` fixture with the same values
+- [x] 3.4 Add a fixture `testdata/empty_params_class` (`query_parameter_limit: 0` with a no-param query) and a fixture `testdata/multiline_comments` (multi-line table and column comments). Verify `make test` passes and the outputs `py_compile`
 
 ## 4. Types and annotation syntax
 

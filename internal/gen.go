@@ -180,8 +180,8 @@ func (q Query) ArgDictNode() *pyast.Node {
 	}
 }
 
-func makePyType(req *plugin.GenerateRequest, col *plugin.Column) pyType {
-	typ := pyInnerType(req, col)
+func makePyType(req *plugin.GenerateRequest, conf Config, col *plugin.Column) pyType {
+	typ := pyInnerType(req, conf, col)
 	return pyType{
 		InnerType: typ,
 		IsArray:   col.IsArray,
@@ -189,14 +189,18 @@ func makePyType(req *plugin.GenerateRequest, col *plugin.Column) pyType {
 	}
 }
 
-func pyInnerType(req *plugin.GenerateRequest, col *plugin.Column) string {
+func pyInnerType(req *plugin.GenerateRequest, conf Config, col *plugin.Column) string {
 	switch req.Settings.Engine {
 	case "postgresql":
-		return postgresType(req, col)
+		return postgresType(req, conf, col)
 	default:
 		log.Println("unsupported engine type")
 		return "Any"
 	}
+}
+
+func className(name string) string {
+	return modelName(name, nil)
 }
 
 func modelName(name string, settings *plugin.Settings) string {
@@ -226,7 +230,32 @@ func pyEnumValueName(value string) string {
 	return strings.ToUpper(id)
 }
 
-func buildEnums(req *plugin.GenerateRequest) []Enum {
+// enumMemberNames makes every member a unique, valid identifier while the
+// values keep their original strings.
+func enumMemberNames(conf Config, vals []string) []string {
+	names := make([]string, len(vals))
+	used := map[string]bool{}
+	for i, v := range vals {
+		name := pyIdent(v, conf, pyEnumValueName)
+		if name == "" {
+			name = fmt.Sprintf("VALUE_%d", i+1)
+		} else if name[0] >= '0' && name[0] <= '9' {
+			name = "VALUE_" + name
+		}
+		if used[name] {
+			k := 2
+			for used[fmt.Sprintf("%s_%d", name, k)] {
+				k++
+			}
+			name = fmt.Sprintf("%s_%d", name, k)
+		}
+		used[name] = true
+		names[i] = name
+	}
+	return names
+}
+
+func buildEnums(conf Config, req *plugin.GenerateRequest) []Enum {
 	var enums []Enum
 	for _, schema := range req.Catalog.Schemas {
 		if schema.Name == "pg_catalog" || schema.Name == "information_schema" {
@@ -240,13 +269,13 @@ func buildEnums(req *plugin.GenerateRequest) []Enum {
 				enumName = schema.Name + "_" + enum.Name
 			}
 			e := Enum{
-				Name:    modelName(enumName, req.Settings),
+				Name:    pyIdent(enumName, conf, className),
 				Comment: enum.Comment,
 			}
-			for _, v := range enum.Vals {
+			for i, name := range enumMemberNames(conf, enum.Vals) {
 				e.Constants = append(e.Constants, Constant{
-					Name:  pyEnumValueName(v),
-					Value: v,
+					Name:  name,
+					Value: enum.Vals[i],
 					Type:  e.Name,
 				})
 			}
@@ -281,14 +310,14 @@ func buildModels(conf Config, req *plugin.GenerateRequest) []Struct {
 			}
 			s := Struct{
 				Table:   plugin.Identifier{Schema: schema.Name, Name: table.Rel.Name},
-				Name:    modelName(structName, req.Settings),
+				Name:    pyIdent(structName, conf, className),
 				Comment: table.Comment,
 			}
 			for _, column := range table.Columns {
-				typ := makePyType(req, column) // TODO: This used to call compiler.ConvertColumn?
+				typ := makePyType(req, conf, column)
 				typ.InnerType = strings.TrimPrefix(typ.InnerType, "models.")
 				s.Fields = append(s.Fields, Field{
-					Name:    column.Name,
+					Name:    pyIdent(column.Name, conf, nil),
 					Type:    typ,
 					Comment: column.Comment,
 				})
@@ -321,7 +350,7 @@ type pyColumn struct {
 	*plugin.Column
 }
 
-func columnsToStruct(req *plugin.GenerateRequest, name string, columns []pyColumn) *Struct {
+func columnsToStruct(req *plugin.GenerateRequest, conf Config, name string, columns []pyColumn) *Struct {
 	gs := Struct{
 		Name: name,
 	}
@@ -329,7 +358,7 @@ func columnsToStruct(req *plugin.GenerateRequest, name string, columns []pyColum
 	suffixes := map[int32]int32{}
 	for i, c := range columns {
 		colName := columnName(c.Column, i)
-		fieldName := colName
+		fieldName := pyIdent(colName, conf, nil)
 		// Track suffixes by the ID of the column, so that columns referring to
 		// the same numbered parameter can be reused.
 		var suffix int32
@@ -344,7 +373,7 @@ func columnsToStruct(req *plugin.GenerateRequest, name string, columns []pyColum
 		}
 		gs.Fields = append(gs.Fields, Field{
 			Name: fieldName,
-			Type: makePyType(req, c.Column),
+			Type: makePyType(req, conf, c.Column),
 		})
 		seen[colName]++
 	}
@@ -381,7 +410,7 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 		gq := Query{
 			Cmd:          query.Cmd,
 			Comments:     query.Comments,
-			MethodName:   methodName,
+			MethodName:   escapeKeyword(methodName),
 			FieldName:    sdk.LowerTitle(query.Name) + "Stmt",
 			ConstantName: strings.ToUpper(methodName),
 			SQL:          sqlalchemySQL(query.Text, req.Settings.Engine),
@@ -406,14 +435,14 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 			gq.Args = []QueryValue{{
 				Emit:   true,
 				Name:   "arg",
-				Struct: columnsToStruct(req, query.Name+"Params", cols),
+				Struct: columnsToStruct(req, conf, query.Name+"Params", cols),
 			}}
 		} else {
 			args := make([]QueryValue, 0, len(query.Params))
 			for _, p := range query.Params {
 				args = append(args, QueryValue{
-					Name: paramName(p),
-					Typ:  makePyType(req, p.Column),
+					Name: pyIdent(paramName(p), conf, nil),
+					Typ:  makePyType(req, conf, p.Column),
 				})
 			}
 			gq.Args = args
@@ -423,7 +452,7 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 			c := query.Columns[0]
 			gq.Ret = QueryValue{
 				Name: columnName(c, 0),
-				Typ:  makePyType(req, c),
+				Typ:  makePyType(req, conf, c),
 			}
 		} else if len(query.Columns) > 1 {
 			var gs *Struct
@@ -438,9 +467,9 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 				for i, f := range s.Fields {
 					c := query.Columns[i]
 					// HACK: models do not have "models." on their types, so trim that so we can find matches
-					trimmedPyType := makePyType(req, c)
+					trimmedPyType := makePyType(req, conf, c)
 					trimmedPyType.InnerType = strings.TrimPrefix(trimmedPyType.InnerType, "models.")
-					sameName := f.Name == columnName(c, i)
+					sameName := f.Name == pyIdent(columnName(c, i), conf, nil)
 					sameType := f.Type == trimmedPyType
 					sameTable := sdk.SameTableName(c.Table, &s.Table, req.Catalog.DefaultSchema)
 					if !sameName || !sameType || !sameTable {
@@ -461,7 +490,7 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 						Column: c,
 					})
 				}
-				gs = columnsToStruct(req, query.Name+"Row", columns)
+				gs = columnsToStruct(req, conf, query.Name+"Row", columns)
 				emit = true
 			}
 			gq.Ret = QueryValue{
@@ -1089,7 +1118,7 @@ func Generate(_ context.Context, req *plugin.GenerateRequest) (*plugin.GenerateR
 		}
 	}
 
-	enums := buildEnums(req)
+	enums := buildEnums(conf, req)
 	models := buildModels(conf, req)
 	queries, err := buildQueries(conf, req, models)
 	if err != nil {

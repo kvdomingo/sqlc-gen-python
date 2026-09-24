@@ -5,3 +5,4 @@ bin
 .direnv
 .devenv*
 devenv.local.nix
+__pycache__/
