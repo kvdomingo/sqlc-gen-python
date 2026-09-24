@@ -140,6 +140,20 @@ func Node(node proto) *ast.Node {
 	// case *ast.Node_Keyword:
 	// 	w.printKeyword(n.Keyword, indent)
 
+	case *ast.ListComp:
+		return &ast.Node{
+			Node: &ast.Node_ListComp{
+				ListComp: n,
+			},
+		}
+
+	case *ast.With:
+		return &ast.Node{
+			Node: &ast.Node_With{
+				With: n,
+			},
+		}
+
 	case *ast.Module:
 		return &ast.Node{
 			Node: &ast.Node_Module{

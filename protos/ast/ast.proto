@@ -36,6 +36,11 @@ message Node {
     Await await = 28 [json_name="Await"];
     AsyncFor async_for = 29 [json_name="AsyncFor"];
     ImportGroup import_group = 30 [json_name="ImportGroup"];
+    ListComp list_comp = 31 [json_name="ListComp"];
+    With with = 32 [json_name="With"];
+    BinOp bin_op = 33 [json_name="BinOp"];
+    BitOr bit_or = 34 [json_name="BitOr"];
+    Tuple tuple = 35 [json_name="Tuple"];
   }
 }
 
@@ -111,6 +116,7 @@ message ClassDef
   repeated Node keywords = 3 [json_name="keywords"];
   repeated Node body = 4 [json_name="body"];
   repeated Node decorator_list = 5 [json_name="decorator_list"];
+  repeated TypeVar type_params = 6 [json_name="type_params"];
 }
 
 // The Python ast module does not parse comments. It's not clear if this is the
@@ -133,6 +139,7 @@ message Constant
 	string str = 1 [json_name="string"];
 	int32 int = 2 [json_name="int"];
     bool none = 3 [json_name="none"];
+    bool ellipsis = 4 [json_name="ellipsis"];
   }
 }
 
@@ -232,6 +239,54 @@ message Subscript
 {
   Name value = 1 [json_name="value"];
   Node slice = 2 [json_name="slice"];
+}
+
+message ListComp
+{
+  Node elt = 1 [json_name="elt"];
+  repeated Comprehension generators = 2 [json_name="generators"];
+}
+
+message Comprehension
+{
+  Node target = 1 [json_name="target"];
+  Node iter = 2 [json_name="iter"];
+  repeated Node ifs = 3 [json_name="ifs"];
+}
+
+message With
+{
+  repeated WithItem items = 1 [json_name="items"];
+  repeated Node body = 2 [json_name="body"];
+}
+
+message WithItem
+{
+  Node context_expr = 1 [json_name="context_expr"];
+  Node optional_vars = 2 [json_name="optional_vars"];
+}
+
+message BinOp
+{
+  Node left = 1 [json_name="left"];
+  Node op = 2 [json_name="op"];
+  Node right = 3 [json_name="right"];
+}
+
+message BitOr
+{
+}
+
+message Tuple
+{
+  repeated Node elts = 1 [json_name="elts"];
+}
+
+// PEP 695 type parameter, printed as `T: <bound>` inside `class C[...]`.
+message TypeVar
+{
+  string name = 1 [json_name="name"];
+  Node bound = 2 [json_name="bound"];
 }
 
 message Yield
