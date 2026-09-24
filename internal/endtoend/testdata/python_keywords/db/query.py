@@ -3,10 +3,11 @@
 #   sqlc v1.31.1
 # source: query.sql
 import dataclasses
-from typing import AsyncIterator, Iterator, Optional
+from typing import AsyncIterator, Iterator, Optional, Union, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
+import sqlalchemy.orm
 
 from db import models
 
@@ -41,7 +42,9 @@ WHERE class = :p1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def get_trip(self, *, id: int) -> Optional[models.Trip]:
@@ -49,10 +52,10 @@ class Querier:
         if row is None:
             return None
         return models.Trip(
-            id=row[0],
-            from_=row[1],
-            to=row[2],
-            class_=row[3],
+            id=cast(int, row[0]),
+            from_=cast(str, row[1]),
+            to=cast(str, row[2]),
+            class_=cast(str, row[3]),
         )
 
     def import_(self, *, from_: str, to: str, class_: str) -> None:
@@ -62,23 +65,25 @@ class Querier:
         result = self._conn.execute(sqlalchemy.text(LIST_DEPARTURES), {"p1": class_})
         for row in result:
             yield ListDeparturesRow(
-                id=row[0],
-                from_=row[1],
+                id=cast(int, row[0]),
+                from_=cast(str, row[1]),
             )
 
     def list_trips_by_class(self, *, class_: str) -> Iterator[models.Trip]:
         result = self._conn.execute(sqlalchemy.text(LIST_TRIPS_BY_CLASS), {"p1": class_})
         for row in result:
             yield models.Trip(
-                id=row[0],
-                from_=row[1],
-                to=row[2],
-                class_=row[3],
+                id=cast(int, row[0]),
+                from_=cast(str, row[1]),
+                to=cast(str, row[2]),
+                class_=cast(str, row[3]),
             )
 
 
 class AsyncQuerier:
-    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
+    _conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]
+
+    def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
     async def get_trip(self, *, id: int) -> Optional[models.Trip]:
@@ -86,10 +91,10 @@ class AsyncQuerier:
         if row is None:
             return None
         return models.Trip(
-            id=row[0],
-            from_=row[1],
-            to=row[2],
-            class_=row[3],
+            id=cast(int, row[0]),
+            from_=cast(str, row[1]),
+            to=cast(str, row[2]),
+            class_=cast(str, row[3]),
         )
 
     async def import_(self, *, from_: str, to: str, class_: str) -> None:
@@ -99,16 +104,16 @@ class AsyncQuerier:
         result = await self._conn.stream(sqlalchemy.text(LIST_DEPARTURES), {"p1": class_})
         async for row in result:
             yield ListDeparturesRow(
-                id=row[0],
-                from_=row[1],
+                id=cast(int, row[0]),
+                from_=cast(str, row[1]),
             )
 
     async def list_trips_by_class(self, *, class_: str) -> AsyncIterator[models.Trip]:
         result = await self._conn.stream(sqlalchemy.text(LIST_TRIPS_BY_CLASS), {"p1": class_})
         async for row in result:
             yield models.Trip(
-                id=row[0],
-                from_=row[1],
-                to=row[2],
-                class_=row[3],
+                id=cast(int, row[0]),
+                from_=cast(str, row[1]),
+                to=cast(str, row[2]),
+                class_=cast(str, row[3]),
             )

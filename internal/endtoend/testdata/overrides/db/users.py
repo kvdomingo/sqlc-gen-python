@@ -2,11 +2,13 @@
 # versions:
 #   sqlc v1.31.1
 # source: users.sql
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Union, cast
 from uuid import UUID
 
 import my_ids
+import my_lib.types
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -27,7 +29,9 @@ SELECT id, org_id, extra FROM users WHERE org_id = :p1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def get_author(self, *, id: UUID) -> Optional[models.Author]:
@@ -35,9 +39,9 @@ class Querier:
         if row is None:
             return None
         return models.Author(
-            id=row[0],
-            name=row[1],
-            avatar=row[2],
+            id=cast(UUID, row[0]),
+            name=cast(str, row[1]),
+            avatar=cast(bytes, row[2]),
         )
 
     def get_user(self, *, id: my_ids.UserId) -> Optional[models.User]:
@@ -45,16 +49,16 @@ class Querier:
         if row is None:
             return None
         return models.User(
-            id=row[0],
-            org_id=row[1],
-            extra=row[2],
+            id=cast(my_ids.UserId, row[0]),
+            org_id=cast(my_ids.Id, row[1]),
+            extra=cast(Optional[my_lib.types.Payload], row[2]),
         )
 
     def list_users_by_org(self, *, org_id: my_ids.Id) -> Iterator[models.User]:
         result = self._conn.execute(sqlalchemy.text(LIST_USERS_BY_ORG), {"p1": org_id})
         for row in result:
             yield models.User(
-                id=row[0],
-                org_id=row[1],
-                extra=row[2],
+                id=cast(my_ids.UserId, row[0]),
+                org_id=cast(my_ids.Id, row[1]),
+                extra=cast(Optional[my_lib.types.Payload], row[2]),
             )

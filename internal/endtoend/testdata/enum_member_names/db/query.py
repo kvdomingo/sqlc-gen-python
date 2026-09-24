@@ -2,9 +2,10 @@
 # versions:
 #   sqlc v1.31.1
 # source: query.sql
-from typing import Iterator
+from typing import Iterator, Union, cast
 
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -16,13 +17,15 @@ WHERE op = :p1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def list_rules_by_op(self, *, op: models.Op) -> Iterator[models.Rule]:
         result = self._conn.execute(sqlalchemy.text(LIST_RULES_BY_OP), {"p1": op})
         for row in result:
             yield models.Rule(
-                id=row[0],
-                op=row[1],
+                id=cast(int, row[0]),
+                op=cast(models.Op, row[1]),
             )

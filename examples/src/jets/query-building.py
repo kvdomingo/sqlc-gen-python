@@ -2,7 +2,7 @@
 # versions:
 #   sqlc v1.31.1
 # source: query-building.sql
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, Union, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
@@ -26,14 +26,16 @@ SELECT id, name FROM pilots LIMIT 5
 
 
 class AsyncQuerier:
-    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
+    _conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]
+
+    def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
     async def count_pilots(self) -> Optional[int]:
         row = (await self._conn.execute(sqlalchemy.text(COUNT_PILOTS))).first()
         if row is None:
             return None
-        return row[0]
+        return cast(int, row[0])
 
     async def delete_pilot(self, *, id: int) -> None:
         await self._conn.execute(sqlalchemy.text(DELETE_PILOT), {"p1": id})
@@ -42,6 +44,6 @@ class AsyncQuerier:
         result = await self._conn.stream(sqlalchemy.text(LIST_PILOTS))
         async for row in result:
             yield models.Pilot(
-                id=row[0],
-                name=row[1],
+                id=cast(int, row[0]),
+                name=cast(str, row[1]),
             )

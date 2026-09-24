@@ -3,9 +3,10 @@
 #   sqlc v1.31.1
 # source: query.sql
 import dataclasses
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Union, cast
 
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -31,19 +32,21 @@ class ListAuthorsParams:
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def count_authors(self, arg: CountAuthorsParams) -> Optional[int]:
         row = self._conn.execute(sqlalchemy.text(COUNT_AUTHORS)).first()
         if row is None:
             return None
-        return row[0]
+        return cast(int, row[0])
 
     def list_authors(self, arg: ListAuthorsParams) -> Iterator[models.Author]:
         result = self._conn.execute(sqlalchemy.text(LIST_AUTHORS))
         for row in result:
             yield models.Author(
-                id=row[0],
-                name=row[1],
+                id=cast(int, row[0]),
+                name=cast(str, row[1]),
             )

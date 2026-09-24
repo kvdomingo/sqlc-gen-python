@@ -2,8 +2,11 @@
 # versions:
 #   sqlc v1.31.1
 # source: query.sql
+from typing import Any, Union, cast
+
 import sqlalchemy
 import sqlalchemy.ext.asyncio
+import sqlalchemy.orm
 
 from querytest import models
 
@@ -14,18 +17,22 @@ DELETE FROM bar WHERE id = :p1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def delete_bar_by_id(self, *, id: int) -> int:
         result = self._conn.execute(sqlalchemy.text(DELETE_BAR_BY_ID), {"p1": id})
-        return result.rowcount
+        return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
 
 
 class AsyncQuerier:
-    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
+    _conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]
+
+    def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
     async def delete_bar_by_id(self, *, id: int) -> int:
         result = await self._conn.execute(sqlalchemy.text(DELETE_BAR_BY_ID), {"p1": id})
-        return result.rowcount
+        return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount

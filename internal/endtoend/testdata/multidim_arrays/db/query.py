@@ -2,10 +2,11 @@
 # versions:
 #   sqlc v1.31.1
 # source: query.sql
-from typing import List, Optional
+from typing import List, Optional, Union, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
+import sqlalchemy.orm
 
 from db import models
 
@@ -21,7 +22,9 @@ SELECT id, matrix, cube, tags FROM grids WHERE id = :p1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def create_grid(self, *, matrix: List[List[int]], cube: Optional[List[List[List[int]]]], tags: Optional[List[str]]) -> None:
@@ -32,15 +35,17 @@ class Querier:
         if row is None:
             return None
         return models.Grid(
-            id=row[0],
-            matrix=row[1],
-            cube=row[2],
-            tags=row[3],
+            id=cast(int, row[0]),
+            matrix=cast(List[List[int]], row[1]),
+            cube=cast(Optional[List[List[List[int]]]], row[2]),
+            tags=cast(Optional[List[str]], row[3]),
         )
 
 
 class AsyncQuerier:
-    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
+    _conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]
+
+    def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
     async def create_grid(self, *, matrix: List[List[int]], cube: Optional[List[List[List[int]]]], tags: Optional[List[str]]) -> None:
@@ -51,8 +56,8 @@ class AsyncQuerier:
         if row is None:
             return None
         return models.Grid(
-            id=row[0],
-            matrix=row[1],
-            cube=row[2],
-            tags=row[3],
+            id=cast(int, row[0]),
+            matrix=cast(List[List[int]], row[1]),
+            cube=cast(Optional[List[List[List[int]]]], row[2]),
+            tags=cast(Optional[List[str]], row[3]),
         )

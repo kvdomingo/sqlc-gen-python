@@ -2,10 +2,11 @@
 # versions:
 #   sqlc v1.31.1
 # source: events.sql
-from typing import Optional
+from typing import List, Optional, Union, cast
 
 import my_lib.types
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -16,7 +17,9 @@ INSERT INTO events (payload, extra) VALUES (:p1, :p2) RETURNING id, payload, ext
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def create_event(self, *, payload: my_lib.types.Payload, extra: Optional[my_lib.types.Payload]) -> Optional[models.Event]:
@@ -24,8 +27,8 @@ class Querier:
         if row is None:
             return None
         return models.Event(
-            id=row[0],
-            payload=row[1],
-            extra=row[2],
-            history=row[3],
+            id=cast(int, row[0]),
+            payload=cast(my_lib.types.Payload, row[1]),
+            extra=cast(Optional[my_lib.types.Payload], row[2]),
+            history=cast(Optional[List[my_lib.types.Payload]], row[3]),
         )

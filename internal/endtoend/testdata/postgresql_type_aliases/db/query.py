@@ -4,9 +4,10 @@
 # source: query.sql
 import dataclasses
 import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Union, cast
 
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -60,7 +61,9 @@ SELECT id, a_varchar, a_charvar, a_bpchar, a_char, a_name, a_time, a_timetz, a_t
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def cast_aliases(self, arg: CastAliasesParams) -> Optional[CastAliasesRow]:
@@ -79,16 +82,16 @@ class Querier:
         if row is None:
             return None
         return CastAliasesRow(
-            v=row[0],
-            cv=row[1],
-            bp=row[2],
-            n=row[3],
-            t=row[4],
-            ttz=row[5],
-            ts=row[6],
-            tstz=row[7],
-            j=row[8],
-            jb=row[9],
+            v=cast(str, row[0]),
+            cv=cast(str, row[1]),
+            bp=cast(str, row[2]),
+            n=cast(str, row[3]),
+            t=cast(datetime.time, row[4]),
+            ttz=cast(datetime.time, row[5]),
+            ts=cast(datetime.datetime, row[6]),
+            tstz=cast(datetime.datetime, row[7]),
+            j=cast(Any, row[8]),
+            jb=cast(Any, row[9]),
         )
 
     def get_everything(self, *, id: int) -> Optional[models.Everything]:
@@ -96,20 +99,20 @@ class Querier:
         if row is None:
             return None
         return models.Everything(
-            id=row[0],
-            a_varchar=row[1],
-            a_charvar=row[2],
-            a_bpchar=row[3],
-            a_char=row[4],
-            a_name=row[5],
-            a_time=row[6],
-            a_timetz=row[7],
-            a_time_wo=row[8],
-            a_time_w=row[9],
-            a_ts=row[10],
-            a_tstz=row[11],
-            a_ts_wo=row[12],
-            a_ts_w=row[13],
-            a_json=row[14],
-            a_jsonb=row[15],
+            id=cast(int, row[0]),
+            a_varchar=cast(str, row[1]),
+            a_charvar=cast(str, row[2]),
+            a_bpchar=cast(str, row[3]),
+            a_char=cast(str, row[4]),
+            a_name=cast(str, row[5]),
+            a_time=cast(datetime.time, row[6]),
+            a_timetz=cast(datetime.time, row[7]),
+            a_time_wo=cast(datetime.time, row[8]),
+            a_time_w=cast(datetime.time, row[9]),
+            a_ts=cast(datetime.datetime, row[10]),
+            a_tstz=cast(datetime.datetime, row[11]),
+            a_ts_wo=cast(datetime.datetime, row[12]),
+            a_ts_w=cast(datetime.datetime, row[13]),
+            a_json=cast(Any, row[14]),
+            a_jsonb=cast(Any, row[15]),
         )

@@ -3,9 +3,10 @@
 #   sqlc v1.31.1
 # source: query.sql
 import dataclasses
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Union, cast
 
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -27,7 +28,9 @@ class ListTaskTitlesRow:
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def get_author(self, *, id: int) -> Optional[models.Author]:
@@ -35,15 +38,15 @@ class Querier:
         if row is None:
             return None
         return models.Author(
-            id=row[0],
-            name=row[1],
-            status=row[2],
+            id=cast(int, row[0]),
+            name=cast(str, row[1]),
+            status=cast(models.Status, row[2]),
         )
 
     def list_task_titles(self, *, priority: models.Priority) -> Iterator[ListTaskTitlesRow]:
         result = self._conn.execute(sqlalchemy.text(LIST_TASK_TITLES), {"p1": priority})
         for row in result:
             yield ListTaskTitlesRow(
-                id=row[0],
-                title=row[1],
+                id=cast(int, row[0]),
+                title=cast(str, row[1]),
             )

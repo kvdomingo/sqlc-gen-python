@@ -2,10 +2,11 @@
 # versions:
 #   sqlc v1.31.1
 # source: query.sql
-from typing import Optional
+from typing import Optional, Union, cast
 
 import my_lib
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -16,7 +17,9 @@ SELECT id, email, nickname FROM members WHERE email = :p1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def get_member_by_email(self, *, email: my_lib.CIText) -> Optional[models.Member]:
@@ -24,7 +27,7 @@ class Querier:
         if row is None:
             return None
         return models.Member(
-            id=row[0],
-            email=row[1],
-            alias=row[2],
+            id=cast(int, row[0]),
+            email=cast(my_lib.CIText, row[1]),
+            alias=cast(str, row[2]),
         )

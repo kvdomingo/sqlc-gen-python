@@ -5,9 +5,11 @@
 import dataclasses
 import datetime
 from collections.abc import AsyncIterator, Iterator
+from typing import Any, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
+import sqlalchemy.orm
 
 from db import models
 
@@ -40,7 +42,9 @@ class ListTitlesRow:
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: sqlalchemy.engine.Connection | sqlalchemy.orm.Session
+
+    def __init__(self, conn: sqlalchemy.engine.Connection | sqlalchemy.orm.Session):
         self._conn = conn
 
     def create_post(self, *, title: str, tags: list[str] | None, status: models.Status | None, created_at: datetime.datetime) -> models.Post | None:
@@ -53,12 +57,12 @@ class Querier:
         if row is None:
             return None
         return models.Post(
-            id=row[0],
-            title=row[1],
-            tags=row[2],
-            status=row[3],
-            payload=row[4],
-            created_at=row[5],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            tags=cast(list[str] | None, row[2]),
+            status=cast(models.Status | None, row[3]),
+            payload=cast(Any | None, row[4]),
+            created_at=cast(datetime.datetime, row[5]),
         )
 
     def get_post(self, *, id: int) -> models.Post | None:
@@ -66,37 +70,39 @@ class Querier:
         if row is None:
             return None
         return models.Post(
-            id=row[0],
-            title=row[1],
-            tags=row[2],
-            status=row[3],
-            payload=row[4],
-            created_at=row[5],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            tags=cast(list[str] | None, row[2]),
+            status=cast(models.Status | None, row[3]),
+            payload=cast(Any | None, row[4]),
+            created_at=cast(datetime.datetime, row[5]),
         )
 
     def list_posts(self) -> Iterator[models.Post]:
         result = self._conn.execute(sqlalchemy.text(LIST_POSTS))
         for row in result:
             yield models.Post(
-                id=row[0],
-                title=row[1],
-                tags=row[2],
-                status=row[3],
-                payload=row[4],
-                created_at=row[5],
+                id=cast(int, row[0]),
+                title=cast(str, row[1]),
+                tags=cast(list[str] | None, row[2]),
+                status=cast(models.Status | None, row[3]),
+                payload=cast(Any | None, row[4]),
+                created_at=cast(datetime.datetime, row[5]),
             )
 
     def list_titles(self, *, status: models.Status | None) -> Iterator[ListTitlesRow]:
         result = self._conn.execute(sqlalchemy.text(LIST_TITLES), {"p1": status})
         for row in result:
             yield ListTitlesRow(
-                id=row[0],
-                title=row[1],
+                id=cast(int, row[0]),
+                title=cast(str, row[1]),
             )
 
 
 class AsyncQuerier:
-    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
+    _conn: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession
+
+    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession):
         self._conn = conn
 
     async def create_post(self, *, title: str, tags: list[str] | None, status: models.Status | None, created_at: datetime.datetime) -> models.Post | None:
@@ -109,12 +115,12 @@ class AsyncQuerier:
         if row is None:
             return None
         return models.Post(
-            id=row[0],
-            title=row[1],
-            tags=row[2],
-            status=row[3],
-            payload=row[4],
-            created_at=row[5],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            tags=cast(list[str] | None, row[2]),
+            status=cast(models.Status | None, row[3]),
+            payload=cast(Any | None, row[4]),
+            created_at=cast(datetime.datetime, row[5]),
         )
 
     async def get_post(self, *, id: int) -> models.Post | None:
@@ -122,30 +128,30 @@ class AsyncQuerier:
         if row is None:
             return None
         return models.Post(
-            id=row[0],
-            title=row[1],
-            tags=row[2],
-            status=row[3],
-            payload=row[4],
-            created_at=row[5],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            tags=cast(list[str] | None, row[2]),
+            status=cast(models.Status | None, row[3]),
+            payload=cast(Any | None, row[4]),
+            created_at=cast(datetime.datetime, row[5]),
         )
 
     async def list_posts(self) -> AsyncIterator[models.Post]:
         result = await self._conn.stream(sqlalchemy.text(LIST_POSTS))
         async for row in result:
             yield models.Post(
-                id=row[0],
-                title=row[1],
-                tags=row[2],
-                status=row[3],
-                payload=row[4],
-                created_at=row[5],
+                id=cast(int, row[0]),
+                title=cast(str, row[1]),
+                tags=cast(list[str] | None, row[2]),
+                status=cast(models.Status | None, row[3]),
+                payload=cast(Any | None, row[4]),
+                created_at=cast(datetime.datetime, row[5]),
             )
 
     async def list_titles(self, *, status: models.Status | None) -> AsyncIterator[ListTitlesRow]:
         result = await self._conn.stream(sqlalchemy.text(LIST_TITLES), {"p1": status})
         async for row in result:
             yield ListTitlesRow(
-                id=row[0],
-                title=row[1],
+                id=cast(int, row[0]),
+                title=cast(str, row[1]),
             )

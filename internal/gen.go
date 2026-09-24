@@ -853,8 +853,13 @@ func (b *querierBuilder) forNode(target string, iter *pyast.Node, body ...*pyast
 	return poet.Node(&pyast.For{Target: poet.Name(target), Iter: iter, Body: body})
 }
 
+// rowCell reads column i of the row, cast to its annotation so strict type
+// checkers accept the untyped Row value.
 func (b *querierBuilder) rowCell(t pyType, rowVar string, i int) *pyast.Node {
-	return subscriptNode(rowVar, constantInt(i))
+	return poet.Node(&pyast.Call{
+		Func: b.f.typing("cast"),
+		Args: []*pyast.Node{b.f.annotation(t), subscriptNode(rowVar, constantInt(i))},
+	})
 }
 
 func (b *querierBuilder) structCall(s *Struct, callee *pyast.Node, rowVar string, idx *int) *pyast.Node {
@@ -879,6 +884,17 @@ func (b *querierBuilder) rowNode(v QueryValue, rowVar string) *pyast.Node {
 	}
 	idx := 0
 	return b.structCall(v.Struct, v.annotation(b.f), rowVar, &idx)
+}
+
+// rowcount reads result.rowcount. Session.execute is typed as returning
+// Result, which lacks rowcount; the cast target is a string so it is never
+// evaluated, keeping SQLAlchemy 1.4 importable.
+func (b *querierBuilder) rowcount() *pyast.Node {
+	b.f.typing("Any")
+	return poet.Attribute(poet.Node(&pyast.Call{
+		Func: b.f.typing("cast"),
+		Args: []*pyast.Node{poet.Constant("sqlalchemy.engine.CursorResult[Any]"), poet.Name("result")},
+	}), "rowcount")
 }
 
 func isNone(name string) *pyast.Node {
@@ -937,12 +953,13 @@ func (b *querierBuilder) method(q Query) (querierMethod, error) {
 	case metadata.CmdExecRows:
 		body = append(body,
 			assignNode("result", b.execute(q, q.argDictNode(""))),
-			poet.Return(poet.Attribute(poet.Name("result"), "rowcount")),
+			poet.Return(b.rowcount()),
 		)
 		m.returns = poet.Name("int")
 	case metadata.CmdExecResult:
 		body = append(body, poet.Return(b.execute(q, q.argDictNode(""))))
-		m.returns = typeRefNode("sqlalchemy", "engine", "Result")
+		b.f.typing("Any")
+		m.returns = poet.Constant("sqlalchemy.engine.Result[Any]")
 	case metadata.CmdCopyFrom:
 		body = append(body,
 			poet.Node(&pyast.If{
@@ -950,7 +967,7 @@ func (b *querierBuilder) method(q Query) (querierMethod, error) {
 				Body: []*pyast.Node{poet.Return(poet.Constant(0))},
 			}),
 			assignNode("result", b.execute(q, sequenceParams(q))),
-			poet.Return(poet.Attribute(poet.Name("result"), "rowcount")),
+			poet.Return(b.rowcount()),
 		)
 		m.returns = poet.Name("int")
 	case metadata.CmdBatchExec:
@@ -1025,9 +1042,16 @@ func initNode(connType *pyast.Node) *pyast.Node {
 func (b *querierBuilder) connType() *pyast.Node {
 	if b.async {
 		b.f.importModule("sqlalchemy.ext.asyncio")
-		return typeRefNode("sqlalchemy", "ext", "asyncio", "AsyncConnection")
+		return b.f.union(
+			typeRefNode("sqlalchemy", "ext", "asyncio", "AsyncConnection"),
+			typeRefNode("sqlalchemy", "ext", "asyncio", "AsyncSession"),
+		)
 	}
-	return typeRefNode("sqlalchemy", "engine", "Connection")
+	b.f.importModule("sqlalchemy.orm")
+	return b.f.union(
+		typeRefNode("sqlalchemy", "engine", "Connection"),
+		typeRefNode("sqlalchemy", "orm", "Session"),
+	)
 }
 
 // classes returns the querier class, preceded by its protocol when enabled.
@@ -1037,7 +1061,15 @@ func (b *querierBuilder) classes(queries []Query) ([]*pyast.Node, error) {
 		name = "AsyncQuerier"
 	}
 	cls := &pyast.ClassDef{Name: name}
-	cls.Body = append(cls.Body, initNode(b.connType()))
+	connType := b.connType()
+	if b.conf.EmitGenericQuerier {
+		cls.TypeParams = []*pyast.TypeVar{{Name: "T", Bound: connType}}
+		connType = poet.Name("T")
+	}
+	cls.Body = append(cls.Body,
+		poet.Node(&pyast.AnnAssign{Target: &pyast.Name{Id: "_conn"}, Annotation: connType}),
+		initNode(connType),
+	)
 	proto := &pyast.ClassDef{Name: name + "Protocol"}
 	for _, q := range queries {
 		m, err := b.method(q)

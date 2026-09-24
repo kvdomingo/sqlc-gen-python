@@ -2,10 +2,11 @@
 # versions:
 #   sqlc v1.31.1
 # source: query.sql
-from typing import AsyncIterator, Iterator, Optional
+from typing import AsyncIterator, Iterator, Optional, Union, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
+import sqlalchemy.orm
 
 from db import models
 
@@ -38,7 +39,9 @@ ORDER BY title
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def create_book(self, *, title: str, status: Optional[models.BookStatus]) -> Optional[models.Book]:
@@ -46,9 +49,9 @@ class Querier:
         if row is None:
             return None
         return models.Book(
-            id=row[0],
-            title=row[1],
-            status=row[2],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            status=cast(Optional[models.BookStatus], row[2]),
         )
 
     def delete_book(self, *, id: int) -> None:
@@ -59,23 +62,25 @@ class Querier:
         if row is None:
             return None
         return models.Book(
-            id=row[0],
-            title=row[1],
-            status=row[2],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            status=cast(Optional[models.BookStatus], row[2]),
         )
 
     def list_books(self) -> Iterator[models.Book]:
         result = self._conn.execute(sqlalchemy.text(LIST_BOOKS))
         for row in result:
             yield models.Book(
-                id=row[0],
-                title=row[1],
-                status=row[2],
+                id=cast(int, row[0]),
+                title=cast(str, row[1]),
+                status=cast(Optional[models.BookStatus], row[2]),
             )
 
 
 class AsyncQuerier:
-    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
+    _conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]
+
+    def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
     async def create_book(self, *, title: str, status: Optional[models.BookStatus]) -> Optional[models.Book]:
@@ -83,9 +88,9 @@ class AsyncQuerier:
         if row is None:
             return None
         return models.Book(
-            id=row[0],
-            title=row[1],
-            status=row[2],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            status=cast(Optional[models.BookStatus], row[2]),
         )
 
     async def delete_book(self, *, id: int) -> None:
@@ -96,16 +101,16 @@ class AsyncQuerier:
         if row is None:
             return None
         return models.Book(
-            id=row[0],
-            title=row[1],
-            status=row[2],
+            id=cast(int, row[0]),
+            title=cast(str, row[1]),
+            status=cast(Optional[models.BookStatus], row[2]),
         )
 
     async def list_books(self) -> AsyncIterator[models.Book]:
         result = await self._conn.stream(sqlalchemy.text(LIST_BOOKS))
         async for row in result:
             yield models.Book(
-                id=row[0],
-                title=row[1],
-                status=row[2],
+                id=cast(int, row[0]),
+                title=cast(str, row[1]),
+                status=cast(Optional[models.BookStatus], row[2]),
             )

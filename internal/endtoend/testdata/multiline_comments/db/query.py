@@ -2,9 +2,10 @@
 # versions:
 #   sqlc v1.31.1
 # source: query.sql
-from typing import Optional
+from typing import Optional, Union, cast
 
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -16,7 +17,9 @@ WHERE id = :p1 LIMIT 1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def get_author(self, *, id: int) -> Optional[models.Author]:
@@ -24,7 +27,7 @@ class Querier:
         if row is None:
             return None
         return models.Author(
-            id=row[0],
-            name=row[1],
-            mood=row[2],
+            id=cast(int, row[0]),
+            name=cast(str, row[1]),
+            mood=cast(Optional[models.Mood], row[2]),
         )

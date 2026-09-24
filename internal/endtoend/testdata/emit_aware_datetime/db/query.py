@@ -2,10 +2,12 @@
 # versions:
 #   sqlc v1.31.1
 # source: query.sql
+import datetime
 import pydantic
-from typing import Iterator, Optional
+from typing import Iterator, List, Optional, Union, cast
 
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -21,22 +23,24 @@ SELECT id, a, b, c, d FROM events WHERE a > :p1
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def get_latest(self) -> Optional[pydantic.AwareDatetime]:
         row = self._conn.execute(sqlalchemy.text(GET_LATEST)).first()
         if row is None:
             return None
-        return row[0]
+        return cast(pydantic.AwareDatetime, row[0])
 
     def list_events_since(self, *, a: pydantic.AwareDatetime) -> Iterator[models.Event]:
         result = self._conn.execute(sqlalchemy.text(LIST_EVENTS_SINCE), {"p1": a})
         for row in result:
             yield models.Event(
-                id=row[0],
-                a=row[1],
-                b=row[2],
-                c=row[3],
-                d=row[4],
+                id=cast(int, row[0]),
+                a=cast(pydantic.AwareDatetime, row[1]),
+                b=cast(datetime.datetime, row[2]),
+                c=cast(Optional[pydantic.AwareDatetime], row[3]),
+                d=cast(Optional[List[pydantic.AwareDatetime]], row[4]),
             )

@@ -3,9 +3,10 @@
 #   sqlc v1.31.1
 # source: query.sql
 import dataclasses
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Union, cast
 
 import sqlalchemy
+import sqlalchemy.orm
 
 from db import models
 
@@ -32,7 +33,9 @@ class ListArtistLinksRow:
 
 
 class Querier:
-    def __init__(self, conn: sqlalchemy.engine.Connection):
+    _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
+
+    def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
     def get_artist(self, *, spotify_link: Optional[str]) -> Optional[models.Artist]:
@@ -40,9 +43,9 @@ class Querier:
         if row is None:
             return None
         return models.Artist(
-            id=row[0],
-            spotify_link=row[1],
-            kind=row[2],
+            id=cast(int, row[0]),
+            spotify_link=cast(Optional[str], row[1]),
+            kind=cast(models.MusicGenre, row[2]),
         )
 
     def get_person(self, *, id: int) -> Optional[models.Human]:
@@ -50,15 +53,15 @@ class Querier:
         if row is None:
             return None
         return models.Human(
-            id=row[0],
-            name=row[1],
-            category=row[2],
+            id=cast(int, row[0]),
+            name=cast(str, row[1]),
+            category=cast(str, row[2]),
         )
 
     def list_artist_links(self, *, kind: models.MusicGenre) -> Iterator[ListArtistLinksRow]:
         result = self._conn.execute(sqlalchemy.text(LIST_ARTIST_LINKS), {"p1": kind})
         for row in result:
             yield ListArtistLinksRow(
-                id=row[0],
-                spotify_link=row[1],
+                id=cast(int, row[0]),
+                spotify_link=cast(Optional[str], row[1]),
             )
