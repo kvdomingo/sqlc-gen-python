@@ -47,6 +47,9 @@ class AsyncQuerier:
         self._conn = conn
 
     async def create_city(self, *, name: str, slug: str) -> Optional[models.City]:
+        """Create a new city. The slug must be unique.
+This is the second line of the comment
+This is the third line"""
         row = (await self._conn.execute(sqlalchemy.text(CREATE_CITY), {"p1": name, "p2": slug})).first()
         if row is None:
             return None

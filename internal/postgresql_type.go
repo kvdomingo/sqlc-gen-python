@@ -19,19 +19,24 @@ func postgresType(req *plugin.GenerateRequest, conf Config, col *plugin.Column) 
 		return "decimal.Decimal"
 	case "boolean", "bool", "pg_catalog.bool":
 		return "bool"
-	case "json", "jsonb":
+	case "json", "jsonb", "pg_catalog.json", "pg_catalog.jsonb":
 		return "Any"
 	case "bytea", "blob", "pg_catalog.bytea":
 		return "memoryview"
-	case "date":
+	case "date", "pg_catalog.date":
 		return "datetime.date"
-	case "pg_catalog.time", "pg_catalog.timetz":
+	case "time", "pg_catalog.time", "timetz", "pg_catalog.timetz", "time without time zone", "time with time zone":
 		return "datetime.time"
-	case "pg_catalog.timestamp", "pg_catalog.timestamptz", "timestamptz":
+	case "timestamp", "pg_catalog.timestamp", "timestamp without time zone":
+		return "datetime.datetime"
+	case "timestamptz", "pg_catalog.timestamptz", "timestamp with time zone":
+		if conf.EmitAwareDatetime {
+			return "pydantic.AwareDatetime"
+		}
 		return "datetime.datetime"
 	case "interval", "pg_catalog.interval":
 		return "datetime.timedelta"
-	case "text", "pg_catalog.varchar", "pg_catalog.bpchar", "string", "citext":
+	case "text", "pg_catalog.text", "varchar", "pg_catalog.varchar", "character varying", "bpchar", "pg_catalog.bpchar", "character", "name", "pg_catalog.name", "string", "citext":
 		return "str"
 	case "uuid":
 		return "uuid.UUID"

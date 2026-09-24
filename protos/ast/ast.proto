@@ -41,6 +41,8 @@ message Node {
     BinOp bin_op = 33 [json_name="BinOp"];
     BitOr bit_or = 34 [json_name="BitOr"];
     Tuple tuple = 35 [json_name="Tuple"];
+    UnaryOp unary_op = 36 [json_name="UnaryOp"];
+    Not not = 37 [json_name="Not"];
   }
 }
 
@@ -274,6 +276,16 @@ message BinOp
 }
 
 message BitOr
+{
+}
+
+message UnaryOp
+{
+  Node op = 1 [json_name="op"];
+  Node operand = 2 [json_name="operand"];
+}
+
+message Not
 {
 }
 

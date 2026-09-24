@@ -133,6 +133,14 @@ func (w *writer) printNode(node *ast.Node, indent int32) {
 	case *ast.Node_Tuple:
 		w.printTuple(n.Tuple, indent)
 
+	case *ast.Node_UnaryOp:
+		w.printNode(n.UnaryOp.Op, indent)
+		w.print(" ")
+		w.printNode(n.UnaryOp.Operand, indent)
+
+	case *ast.Node_Not:
+		w.print("not")
+
 	case *ast.Node_With:
 		w.printWith(n.With, indent)
 

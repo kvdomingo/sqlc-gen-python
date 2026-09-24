@@ -157,3 +157,14 @@ func With(contextExpr *ast.Node, body ...*ast.Node) *ast.Node {
 		},
 	}
 }
+
+func Not(operand *ast.Node) *ast.Node {
+	return &ast.Node{
+		Node: &ast.Node_UnaryOp{
+			UnaryOp: &ast.UnaryOp{
+				Op:      &ast.Node{Node: &ast.Node_Not{Not: &ast.Not{}}},
+				Operand: operand,
+			},
+		},
+	}
+}

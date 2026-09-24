@@ -302,6 +302,16 @@ class Q[T: A | B]:
     _conn: T
 `,
 		},
+		"if-not": {
+			Node: poet.Node(&ast.If{
+				Test: poet.Not(poet.Name("arg")),
+				Body: []*ast.Node{poet.Return(poet.Constant(0))},
+			}),
+			Expected: `
+if not arg:
+    return 0
+`,
+		},
 		"if-else": {
 			Node: poet.Node(&ast.If{
 				Test: poet.Name("row"),

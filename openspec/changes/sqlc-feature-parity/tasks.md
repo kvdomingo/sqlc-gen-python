@@ -24,9 +24,9 @@
 
 ## 4. Types and annotation syntax
 
-- [ ] 4.1 Change `pyType.IsArray` to `ArrayDims int`, and emit nested list wrappers. Verify with a new fixture `testdata/multidim_arrays` (`int[][]` gives `List[List[int]]`, and `text[]` is unchanged)
-- [ ] 4.2 Add the missing PostgreSQL aliases (`varchar`, `character varying`, `bpchar`, `character`, `name`, `time`/`timetz`/`timestamp` and the `with/without time zone` spellings, `pg_catalog.json`/`jsonb`) to `postgresql_type.go`. Verify with a new fixture `testdata/postgresql_type_aliases` that shows no `Any` for them
-- [ ] 4.3 Make `Annotation(syntax)` the only annotation builder, add the generic-wrapper helper (`Optional`/`List`/`Iterator`/`AsyncIterator`/`Sequence` → typing or modern forms, `BinOp` for `|`), and have the importer ask that helper which names were used. Verify existing fixtures show no diff with `emit_modern_types` off
+- [x] 4.1 Change `pyType.IsArray` to `ArrayDims int`, and emit nested list wrappers. Verify with a new fixture `testdata/multidim_arrays` (`int[][]` gives `List[List[int]]`, and `text[]` is unchanged)
+- [x] 4.2 Add the missing PostgreSQL aliases (`varchar`, `character varying`, `bpchar`, `character`, `name`, `time`/`timetz`/`timestamp` and the `with/without time zone` spellings, `pg_catalog.json`/`jsonb`) to `postgresql_type.go`. Verify with a new fixture `testdata/postgresql_type_aliases` that shows no `Any` for them
+- [x] 4.3 Make `Annotation(syntax)` the only annotation builder, add the generic-wrapper helper (`Optional`/`List`/`Iterator`/`AsyncIterator`/`Sequence` → typing or modern forms, `BinOp` for `|`), and have the importer ask that helper which names were used. Verify existing fixtures show no diff with `emit_modern_types` off
 - [ ] 4.4 Add `emit_modern_types`, and verify with a new fixture `testdata/emit_modern_types` (`list[str] | None`, `from collections.abc import Iterator, AsyncIterator`, and no `Optional`/`List` imports)
 - [ ] 4.5 Add `emit_aware_datetime` in `postgresType` (only the `timestamptz` spellings), with the config check that requires `emit_pydantic_models`. Verify with a new fixture `testdata/emit_aware_datetime` (`timestamptz` → `pydantic.AwareDatetime`, `timestamp` unchanged) and a fixture `testdata/emit_aware_datetime_no_pydantic` whose `stderr.txt` holds the expected error
 
@@ -42,7 +42,7 @@
 
 ## 6. Querier code generation
 
-- [ ] 6.1 Refactor the sync and async querier bodies in `buildQueryTree` into one builder with an `async` flag, for all existing commands. Verify every existing fixture regenerates with no diff
+- [x] 6.1 Refactor the sync and async querier bodies in `buildQueryTree` into one builder with an `async` flag, for all existing commands. Verify every existing fixture regenerates with no diff
 - [ ] 6.2 Widen the querier connection types to `Connection | Session` and `AsyncConnection | AsyncSession`, add the class-level `_conn` annotation, and wrap every row value in `cast(<annotation>, row[i])`. Land it as its own commit that regenerates all fixtures and `examples/`, and verify `make test` and `cd examples && sqlc diff` pass
 - [ ] 6.3 Add `emit_generic_querier`: emit `class Querier[T: <union>]` and `class AsyncQuerier[T: <union>]` with `_conn: T` and `conn: T`, with the bound in the active syntax. Verify with a new fixture `testdata/emit_generic_querier` (in typing and modern syntax) plus a `_check.py` where `reveal_type(Querier(session)._conn)` is `Session` and a protocol assignment passes under `mypy --strict`
 - [ ] 6.4 Emit `Query.Comments` as the docstring of sync and async querier methods. Verify with a new fixture `testdata/query_comments`, and check that uncommented queries have no docstring
