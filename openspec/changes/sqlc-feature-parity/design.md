@@ -44,7 +44,9 @@ The override's `py_type` string becomes `InnerType`.
 
 `makePyType` is also used for parameters, because sqlc sets `Column.Table` and `Column.Name` on parameters it can attribute to a column. That makes column overrides flow to parameters for free.
 
-For imports, the importer already derives modules from dotted `InnerType` names for stdlib types (`datetime`, `uuid`, `decimal`). It will be generalized: any `InnerType` with a dot that is not `models.*` adds `import <prefix>`. The fixed list of stdlib checks is replaced by this rule. Stdlib imports and package (third-party) imports keep separate groups, as today: known stdlib modules go in the std group, and override modules go in the pkg group.
+For imports, any `InnerType` with a dot that is not `models.*` adds `import <prefix>`, replacing the fixed list of stdlib checks. Stdlib imports and package (third-party) imports keep separate groups, as today: known stdlib modules go in the std group, and override modules go in the pkg group.
+
+As implemented, the importer no longer predicts imports from `Query`/`Struct` data. Each generated file gets a recorder (`pyFile`) that every annotation, `cast`, typing name and module reference goes through while the body is built; the import groups are assembled from what was recorded. This keeps imports correct for protocols, errors, `Sequence`, embeds and both syntaxes without a second list to keep in sync. Existing fixtures are byte-identical.
 
 Two forms are accepted:
 - A dotted `py_type` with no `py_import` (`my_lib.types.Payload` → `import my_lib.types`). This mirrors Go's `go_type: "pkg/path.Type"`.
@@ -57,7 +59,7 @@ The importer already models `from X import Y` (`importSpec.Name`), so the second
 - overrides: `append(local, global...)`. Local entries come first, so they are checked first and win.
 - rename: global values are copied over local ones.
 
-The spec pins down both orders.
+The spec pins down both orders. Note that sqlc's Go codegen actually does `append(global, local...)` with first match winning, so there global overrides win; this plugin deliberately checks the codegen block first, as the spec says.
 
 ### 4. One identifier function
 `pyIdent(dbName string, conf Config) string` applies `rename` first, then escapes keywords with a trailing `_`, using a hard-coded copy of `keyword.kwlist` for Python 3.12. It is the only source of names for:
@@ -138,6 +140,7 @@ This adds the missing Go spellings to the existing `switch` in `postgresql_type.
 - `mise.toml` pins Go to `1.23`, and adds `buf` and a Python 3.12 with `mypy` for fixture type checks.
 - CI (`.github/workflows/*.yml`) moves to sqlc `1.31.1`.
 - All fixtures and `examples/` are regenerated with `sqlc generate` so that `sqlc diff` stays clean.
+- `examples/sqlc.yaml` points at the locally built `file://../bin/sqlc-gen-python.wasm` (no sha256, which sqlc then computes) instead of the released 1.2.0 WASM, so CI's `sqlc diff` checks this tree.
 
 `go.mod` keeps `go 1.19` as its language version. Raising it is not needed, and leaving it avoids forcing downstream builds to change.
 
@@ -148,6 +151,8 @@ One proto change, regenerated once, covers every feature that needs new syntax:
 - `BinOp` with a `BitOr` operator, for `X | None`
 - a `Constant.ellipsis` oneof case, for protocol stubs
 - `ClassDef.type_params` (a repeated `TypeVar{name, bound}`), printed as `[T: <bound>]` after the class name, for generic queriers
+- `Tuple`, for `Union[A, B]` subscripts
+- `UnaryOp` with a `Not` operator, for the `if not arg:` guard of `:copyfrom`/`:batchexec`
 
 The printer gets a case for each. `If.or_else` already exists in the proto, but `printer.go` never prints it (it would drop an `else:` silently), so the printer gets `else` support, which `:batchone` needs.
 
@@ -159,7 +164,7 @@ Alternative considered: encoding `X | None` or `...` as raw `Name` text. Rejecte
 `cast()` targets reuse `Annotation(syntax)`, so they always match the field annotation. With modern syntax, the `cast(str | None, ...)` expressions evaluate `|` at runtime, which is fine on 3.10+, the documented minimum for that option.
 
 ### 16. Aware datetimes
-The switch lives in `postgresType`: it receives `conf`, and returns `pydantic.AwareDatetime` for `timestamptz` spellings when `emit_aware_datetime` is set. Overrides run before the type map (decision 2), so they still win. `Config` validation runs right after parsing and rejects `emit_aware_datetime` without `emit_pydantic_models`. `pydantic` goes in the pkg import group (third-party). The generalized importer (decision 2) already picks it up from the dotted name.
+The switch lives in `postgresType`: it receives `conf`, and returns `pydantic.AwareDatetime` for `timestamptz` spellings when `emit_aware_datetime` is set. Overrides run before the type map (decision 2), so they still win. `Config` validation runs right after parsing and rejects `emit_aware_datetime` without `emit_pydantic_models`. `pydantic` stays in the first import group, where `import pydantic` for `BaseModel` has always been printed, so existing pydantic fixtures do not change. The importer (decision 2) picks it up from the dotted name.
 
 ### 17. Batch one/many
 Both commands loop over `arg` in the method body, so the method is a (sync or async) generator, which gives the lazy semantics the spec requires:
@@ -173,7 +178,7 @@ The `__init__` annotation and a class-level `_conn: <union>` annotation use:
 - sync: `Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]`, or `|` under modern syntax
 - async: `sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession`
 
-`Session.execute` and `AsyncSession.execute`/`stream` accept the same `text()` and parameter arguments, so method bodies do not change.
+`Session.execute` and `AsyncSession.execute`/`stream` accept the same `text()` and parameter arguments, so method bodies do not change. One typing consequence: `Session.execute` is typed as returning `Result`, which has no `rowcount`, so `:execrows` and `:copyfrom` read `cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount`, and `:execresult` returns `"sqlalchemy.engine.Result[Any]"`. Both are strings so no subscripted SQLAlchemy type is evaluated at runtime.
 
 With `emit_generic_querier`, the same union becomes the bound of a PEP 695 type parameter: `class Querier[T: <union>]`, with `_conn: T` and `conn: T`. The union is spelled by `Annotation(syntax)` (decision 15). The class body is otherwise identical, so the method builder (task 6.1) takes no notice of the flag, and only `querierClassDef`/`asyncQuerierClassDef` branch on it. It is opt-in, not the default, because PEP 695 syntax is a `SyntaxError` before Python 3.12.
 
@@ -183,7 +188,7 @@ Alternative considered: a pre-3.12 `T = TypeVar("T", bound=...)` plus `Generic[T
 `buildQueryTree` builds each querier's `FunctionDef`s first. When `emit_querier_protocol` is set, it derives the protocol from them: same name, args, and returns, and a body of `Expr(Constant(ellipsis))`, with no docstring. Protocol methods for async generators (`:many`, `:batchone`, `:batchmany`) are emitted as a plain `FunctionDef`, not `AsyncFunctionDef`. An async-generator function's call type is `AsyncIterator[T]`, whereas `async def f() -> AsyncIterator[T]` in a stub means `Coroutine[..., AsyncIterator[T]]`, so mypy would reject the real querier. Protocols come before the concrete classes in the file. The concrete classes do not subclass them; conformance is structural. A fixture-level mypy check (a `_check.py` that assigns each querier to its protocol) proves the match.
 
 ### 20. Query errors
-`errors.py` is a fixed template printed through the AST, so the header and version logic are shared. It matches the fork's classes and its `_wrap_integrity_error` and `_wrap_operational_error` helpers, and adds:
+`errors.py` shares the header, version and import logic with the other modules (printed through the AST), followed by a fixed text template whose `Optional`/`Iterator` spellings follow the active syntax. It matches the fork's classes and its `_wrap_integrity_error` and `_wrap_operational_error` helpers, and adds:
 - `constraint_name`, read best-effort from `orig.diag.constraint_name` (psycopg2 and 3) or `orig.__cause__.constraint_name` (asyncpg through SQLAlchemy's adapter), falling back to `None`
 - a `_wrap_errors(query_name)` context manager (`contextlib.contextmanager`) that catches `IntegrityError` and `OperationalError` and re-raises through the two helpers `from e`
 

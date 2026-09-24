@@ -63,7 +63,7 @@
   - a fake that satisfies `QuerierProtocol`
 
   Verify `pytest` passes against a local `postgres` container
-- [ ] 7.4 Add README sections for:
+- [x] 7.4 Add README sections for:
   - `overrides` (both forms, global `options`, and `nullable`), `rename`, `omit_unused_structs`, and `omit_sqlc_version`
   - `emit_modern_types` (Python 3.10+) and `emit_aware_datetime` (requires pydantic 2)
   - `emit_generic_querier` (Python 3.12+), `emit_querier_protocol`, and `emit_query_errors`
@@ -72,4 +72,4 @@
   - a "Migrating from alt-sqlc-gen-python" note (the `:batchexec` signature, and the opt-in modern syntax, aware datetimes, and generic queriers)
 
   Verify every new option name appears in the README
-- [ ] 7.5 Run `make test`, `go vet ./...`, and `cd examples && sqlc diff` for a final check, and confirm all pass
+- [x] 7.5 Run `make test`, `go vet ./...`, and `cd examples && sqlc diff` for a final check, and confirm all pass
