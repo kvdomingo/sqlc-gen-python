@@ -356,7 +356,7 @@ var postgresPlaceholderRegexp = regexp.MustCompile(`\B\$(\d+)\b`)
 // Sqlalchemy uses ":name" for placeholders, so "$N" is converted to ":pN"
 // This also means ":" has special meaning to sqlalchemy, so it must be escaped.
 func sqlalchemySQL(s, engine string) string {
-	s = strings.ReplaceAll(s, ":", `\\:`)
+	s = strings.ReplaceAll(s, ":", `\:`)
 	if engine == "postgresql" {
 		return postgresPlaceholderRegexp.ReplaceAllString(s, ":p$1")
 	}
@@ -846,7 +846,7 @@ func buildQueryTree(ctx *pyTmplCtx, i *importer, source string) *pyast.Node {
 		if !ctx.OutputQuery(q.SourceName) {
 			continue
 		}
-		queryText := fmt.Sprintf("-- name: %s \\\\%s\n%s\n", q.MethodName, q.Cmd, q.SQL)
+		queryText := fmt.Sprintf("-- name: %s \\%s\n%s\n", q.MethodName, q.Cmd, q.SQL)
 		mod.Body = append(mod.Body, assignNode(q.ConstantName, poet.Constant(queryText)))
 		for _, arg := range q.Args {
 			if arg.EmitStruct() {

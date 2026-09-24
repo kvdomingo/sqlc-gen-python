@@ -44,7 +44,7 @@ A table, column, or enum comment that spans more than one line SHALL be emitted 
 
 #### Scenario: Multi-line column comment
 - **WHEN** a column comment is `"first line\nsecond line"`
-- **THEN** the field is followed by `# first line` and a second line `# second line`, and the module parses
+- **THEN** the field is preceded by `# first line` and a second line `# second line`, and the module parses
 
 ### Requirement: String literals are escaped
 Every string literal the plugin emits SHALL be a valid Python literal that evaluates to exactly the source text. This covers enum values, docstrings from table, enum, and query comments, and SQL text. Backslashes and quote characters in the source text SHALL be escaped.

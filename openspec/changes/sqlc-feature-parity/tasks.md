@@ -2,18 +2,18 @@
 
 ## 1. Tooling and baseline
 
-- [ ] 1.1 In `mise.toml`, pin Go to 1.23 and add `buf` and Python 3.12. Add `mypy>=1.12`, `pydantic>=2`, `sqlalchemy>=2`, `psycopg`, and `asyncpg` to `examples/requirements.txt`. Verify `mise install && make all` produces `bin/sqlc-gen-python.wasm`
-- [ ] 1.2 Bump the sqlc version to `1.31.1` in `.github/workflows/*.yml`, and verify with `grep -rn sqlc-version .github/`
-- [ ] 1.3 With no code changes, regenerate every `internal/endtoend/testdata/*` fixture and `examples/` using sqlc v1.31.1 (`sqlc generate` in each dir). Commit it on its own and verify `make test` passes and `cd examples && sqlc diff` is clean
+- [x] 1.1 In `mise.toml`, pin Go to 1.23 and add `buf` and Python 3.12. Add `mypy>=1.12`, `pydantic>=2`, `sqlalchemy>=2`, `psycopg`, and `asyncpg` to `examples/requirements.txt`. Verify `mise install && make all` produces `bin/sqlc-gen-python.wasm`
+- [x] 1.2 Bump the sqlc version to `1.31.1` in `.github/workflows/*.yml`, and verify with `grep -rn sqlc-version .github/`
+- [x] 1.3 With no code changes, regenerate every `internal/endtoend/testdata/*` fixture and `examples/` using sqlc v1.31.1 (`sqlc generate` in each dir). Commit it on its own and verify `make test` passes and `cd examples && sqlc diff` is clean
 
 ## 2. Printer and AST foundations
 
-- [ ] 2.1 Escape `\` and the active quote character in `printConstant`. Switch `sqlalchemySQL` and the `-- name:` header in `buildQueryTree` to emit runtime text (single `\:`). Verify `make test` shows no fixture diffs and a new `printer_test.go` case round-trips `say "hi"` and `a\b`
-- [ ] 2.2 Add one triple-quoted docstring helper and use it in `printClassDef`, `printFunctionDef`, and `printAsyncFunctionDef`. Verify with a printer test for a multi-line class docstring and a function docstring
-- [ ] 2.3 Print `pass` for a `ClassDef` with an empty body, and verify with a printer test
-- [ ] 2.4 Print multi-line `AnnAssign.Comment` values as one `# ` line per source line at the field's indent, and verify with a printer test
-- [ ] 2.5 Add `ListComp`, `Comprehension`, `With`, `WithItem`, `BinOp` (with `BitOr`), a `Constant.ellipsis` case, and `ClassDef.type_params` (`TypeVar{name, bound}`) to `protos/ast/ast.proto`, and regenerate `internal/ast/ast.pb.go` with `buf generate`. Verify `go build ./...` succeeds
-- [ ] 2.6 Add printer support for each node from 2.5 and for `If.or_else` (`else:`). Verify with printer tests that render `[{"p1": a.x} for a in arg]`, `with errors._wrap_errors("q"):` plus a body, `list[int] | None`, `def f(self) -> int: ...`, `class Q[T: A | B]:`, and an `if`/`else`
+- [x] 2.1 Escape `\` and the active quote character in `printConstant`. Switch `sqlalchemySQL` and the `-- name:` header in `buildQueryTree` to emit runtime text (single `\:`). Verify `make test` shows no fixture diffs and a new `printer_test.go` case round-trips `say "hi"` and `a\b`
+- [x] 2.2 Add one triple-quoted docstring helper and use it in `printClassDef`, `printFunctionDef`, and `printAsyncFunctionDef`. Verify with a printer test for a multi-line class docstring and a function docstring
+- [x] 2.3 Print `pass` for a `ClassDef` with an empty body, and verify with a printer test
+- [x] 2.4 Print multi-line `AnnAssign.Comment` values as one `# ` line per source line at the field's indent, and verify with a printer test
+- [x] 2.5 Add `ListComp`, `Comprehension`, `With`, `WithItem`, `BinOp` (with `BitOr`), a `Constant.ellipsis` case, and `ClassDef.type_params` (`TypeVar{name, bound}`) to `protos/ast/ast.proto`, and regenerate `internal/ast/ast.pb.go` with `buf generate`. Verify `go build ./...` succeeds
+- [x] 2.6 Add printer support for each node from 2.5 and for `If.or_else` (`else:`). Verify with printer tests that render `[{"p1": a.x} for a in arg]`, `with errors._wrap_errors("q"):` plus a body, `list[int] | None`, `def f(self) -> int: ...`, `class Q[T: A | B]:`, and an `if`/`else`
 
 ## 3. Identifiers and enums
 
