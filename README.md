@@ -291,7 +291,9 @@ fails generation.
 ### Embedded Structs with `sqlc.embed()`
 
 When a query joins tables, `sqlc.embed()` nests whole models in the row
-instead of flattening their columns.
+instead of flattening their columns. With a `LEFT JOIN` that finds no match,
+the embedded model is built from `None` values even though its fields are
+typed as non-null, as in sqlc's Go codegen.
 
 ```sql
 -- name: GetBookWithAuthor :one
@@ -405,9 +407,16 @@ options:
 - `column` entries win over `db_type` entries, and also apply to parameters
   compared against that column.
 - Nullable and array columns keep their `Optional[...]`/`List[...]` wrappers.
+- `db_type` accepts SQL spellings such as `bigint` or
+  `timestamp with time zone` as well as `int8` or `timestamptz`.
+- A generic `py_type` such as `dict[str, decimal.Decimal]` imports the module
+  of every dotted name in it. Bare names other than builtins are not imported,
+  so write `typing.Any`, not `Any`.
 
 Overrides and `rename` can also be set once for every codegen block in sqlc's
-top-level `options`. Entries in the codegen block are checked first:
+top-level `options`. Codegen `overrides` are checked before global ones, but a
+global `rename` entry replaces a codegen entry for the same key, as in sqlc's
+Go codegen:
 
 ```yaml
 options:
@@ -433,7 +442,10 @@ rename:
 ```
 
 Names that are Python keywords get a trailing underscore (`from` becomes
-`from_`), whether they come from the schema or from `rename`.
+`from_`), whether they come from the schema or from `rename`. So do keyword
+parameters that would shadow a name the method body uses, such as `errors`,
+`models`, `cast` or an imported module, and a repeated parameter name gets a
+numeric suffix (`id`, `id_2`).
 
 ### Omit Unused Structs
 
