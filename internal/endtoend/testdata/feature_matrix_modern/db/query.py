@@ -77,6 +77,16 @@ class GetBookWithAuthorRow(pydantic.BaseModel):
     authors: models.Author
 
 
+INT = """-- name: int \\:execrows
+DELETE FROM books WHERE id = :p1
+"""
+
+
+LIST = """-- name: list \\:many
+SELECT tags FROM books
+"""
+
+
 LIST_AUTHORS = """-- name: list_authors \\:many
 SELECT id, name, bio, created_at FROM authors ORDER BY name
 """
@@ -105,6 +115,21 @@ class ListBooksByStatusRow(pydantic.BaseModel):
     author_name: str
 
 
+LIST_TAGS = """-- name: list_tags \\:many
+SELECT tags FROM books WHERE id = :p1
+"""
+
+
+MODELS = """-- name: models \\:one
+SELECT id, name, bio, created_at FROM authors WHERE id = :p1
+"""
+
+
+PICK_AUTHOR = """-- name: pick_author \\:one
+SELECT id, name, bio, created_at FROM authors WHERE name = :p1
+"""
+
+
 class QuerierProtocol(Protocol):
     def count_authors(self) -> int | None: ...
 
@@ -122,11 +147,21 @@ class QuerierProtocol(Protocol):
 
     def get_book_with_author(self, *, id: int) -> GetBookWithAuthorRow | None: ...
 
+    def int_(self, *, id: int) -> int: ...
+
+    def list_(self) -> Iterator[list[str] | None]: ...
+
     def list_authors(self) -> Iterator[models.Author]: ...
 
     def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> Iterator[list[models.Book]]: ...
 
     def list_books_by_status(self, *, status: models.BookStatus, class_: int) -> Iterator[ListBooksByStatusRow]: ...
+
+    def list_tags(self, *, id: int) -> Iterator[list[str] | None]: ...
+
+    def models_(self, *, id: int) -> models.Author | None: ...
+
+    def pick_author(self, *, name: str) -> models.Author | None: ...
 
 
 class AsyncQuerierProtocol(Protocol):
@@ -146,11 +181,21 @@ class AsyncQuerierProtocol(Protocol):
 
     async def get_book_with_author(self, *, id: int) -> GetBookWithAuthorRow | None: ...
 
+    async def int_(self, *, id: int) -> int: ...
+
+    def list_(self) -> AsyncIterator[list[str] | None]: ...
+
     def list_authors(self) -> AsyncIterator[models.Author]: ...
 
     def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> AsyncIterator[list[models.Book]]: ...
 
     def list_books_by_status(self, *, status: models.BookStatus, class_: int) -> AsyncIterator[ListBooksByStatusRow]: ...
+
+    def list_tags(self, *, id: int) -> AsyncIterator[list[str] | None]: ...
+
+    async def models_(self, *, id: int) -> models.Author | None: ...
+
+    async def pick_author(self, *, name: str) -> models.Author | None: ...
 
 
 class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
@@ -251,6 +296,17 @@ class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 ),
             )
 
+    def int_(self, *, id: int) -> int:
+        with errors._wrap_errors("int_"):
+            result = self._conn.execute(sqlalchemy.text(INT), {"p1": id})
+            return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
+
+    def list_(self) -> Iterator[list[str] | None]:
+        with errors._wrap_errors("list_"):
+            result = self._conn.execute(sqlalchemy.text(LIST))
+            for row in result:
+                yield cast(list[str] | None, row[0])
+
     def list_authors(self) -> Iterator[models.Author]:
         with errors._wrap_errors("list_authors"):
             result = self._conn.execute(sqlalchemy.text(LIST_AUTHORS))
@@ -284,6 +340,36 @@ class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                     from_=cast(datetime.date | None, row[2]),
                     author_name=cast(str, row[3]),
                 )
+
+    def list_tags(self, *, id: int) -> Iterator[list[str] | None]:
+        with errors._wrap_errors("list_tags"):
+            result = self._conn.execute(sqlalchemy.text(LIST_TAGS), {"p1": id})
+            for row in result:
+                yield cast(list[str] | None, row[0])
+
+    def models_(self, *, id: int) -> models.Author | None:
+        with errors._wrap_errors("models_"):
+            row = self._conn.execute(sqlalchemy.text(MODELS), {"p1": id}).first()
+            if row is None:
+                return None
+            return models.Author(
+                id=cast(int, row[0]),
+                name=cast(str, row[1]),
+                bio=cast(str | None, row[2]),
+                created_at=cast(pydantic.AwareDatetime, row[3]),
+            )
+
+    def pick_author(self, *, name: str) -> models.Author | None:
+        with errors._wrap_errors("pick_author"):
+            row = self._conn.execute(sqlalchemy.text(PICK_AUTHOR), {"p1": name}).first()
+            if row is None:
+                return None
+            return models.Author(
+                id=cast(int, row[0]),
+                name=cast(str, row[1]),
+                bio=cast(str | None, row[2]),
+                created_at=cast(pydantic.AwareDatetime, row[3]),
+            )
 
 
 class AsyncQuerier[T: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession]:
@@ -384,6 +470,17 @@ class AsyncQuerier[T: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.as
                 ),
             )
 
+    async def int_(self, *, id: int) -> int:
+        with errors._wrap_errors("int_"):
+            result = await self._conn.execute(sqlalchemy.text(INT), {"p1": id})
+            return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
+
+    async def list_(self) -> AsyncIterator[list[str] | None]:
+        with errors._wrap_errors("list_"):
+            result = await self._conn.stream(sqlalchemy.text(LIST))
+            async for row in result:
+                yield cast(list[str] | None, row[0])
+
     async def list_authors(self) -> AsyncIterator[models.Author]:
         with errors._wrap_errors("list_authors"):
             result = await self._conn.stream(sqlalchemy.text(LIST_AUTHORS))
@@ -417,3 +514,33 @@ class AsyncQuerier[T: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.as
                     from_=cast(datetime.date | None, row[2]),
                     author_name=cast(str, row[3]),
                 )
+
+    async def list_tags(self, *, id: int) -> AsyncIterator[list[str] | None]:
+        with errors._wrap_errors("list_tags"):
+            result = await self._conn.stream(sqlalchemy.text(LIST_TAGS), {"p1": id})
+            async for row in result:
+                yield cast(list[str] | None, row[0])
+
+    async def models_(self, *, id: int) -> models.Author | None:
+        with errors._wrap_errors("models_"):
+            row = (await self._conn.execute(sqlalchemy.text(MODELS), {"p1": id})).first()
+            if row is None:
+                return None
+            return models.Author(
+                id=cast(int, row[0]),
+                name=cast(str, row[1]),
+                bio=cast(str | None, row[2]),
+                created_at=cast(pydantic.AwareDatetime, row[3]),
+            )
+
+    async def pick_author(self, *, name: str) -> models.Author | None:
+        with errors._wrap_errors("pick_author"):
+            row = (await self._conn.execute(sqlalchemy.text(PICK_AUTHOR), {"p1": name})).first()
+            if row is None:
+                return None
+            return models.Author(
+                id=cast(int, row[0]),
+                name=cast(str, row[1]),
+                bio=cast(str | None, row[2]),
+                created_at=cast(pydantic.AwareDatetime, row[3]),
+            )

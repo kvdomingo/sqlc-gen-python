@@ -6,7 +6,7 @@ plugins:
       sha256: "b559ab8a8ae8d7e726ff88f754d1c2318d08f45af556a65d7c075e835a2e6464"
 sql:
   - schema: schema.sql
-    queries: query.sql
+    queries: models.sql
     engine: postgresql
     codegen:
       - plugin: py

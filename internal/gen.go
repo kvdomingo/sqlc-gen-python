@@ -412,11 +412,15 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 		}
 
 		methodName := methodName(query.Name)
+		defName := escapeKeyword(methodName)
+		if _, ok := moduleNames[defName]; ok {
+			defName += "_"
+		}
 
 		gq := Query{
 			Cmd:          query.Cmd,
 			Comments:     queryComments(query.Comments),
-			MethodName:   escapeKeyword(methodName),
+			MethodName:   defName,
 			ConstantName: strings.ToUpper(methodName),
 			SQL:          sqlalchemySQL(query.Text, req.Settings.Engine),
 			SourceName:   query.Filename,
@@ -1103,7 +1107,7 @@ func buildQueryTree(ctx *pyTmplCtx, source string) (*pyast.Node, error) {
 
 	var body []*pyast.Node
 	for _, q := range queries {
-		queryText := fmt.Sprintf("-- name: %s \\%s\n%s\n", q.MethodName, q.Cmd, q.SQL)
+		queryText := fmt.Sprintf("-- name: %s \\%s\n%s\n", escapeKeyword(strings.ToLower(q.ConstantName)), q.Cmd, q.SQL)
 		body = append(body, assignNode(q.ConstantName, poet.Constant(queryText)))
 		for _, arg := range q.Args {
 			if arg.EmitStruct() {
@@ -1203,6 +1207,12 @@ func Generate(_ context.Context, req *plugin.GenerateRequest) (*plugin.GenerateR
 	files := map[string]struct{}{}
 	for _, q := range queries {
 		files[q.SourceName] = struct{}{}
+	}
+
+	for source := range files {
+		if queryFileName(source) == "models.py" {
+			return nil, fmt.Errorf("query file %s would overwrite models.py", source)
+		}
 	}
 
 	if conf.EmitQueryErrors {

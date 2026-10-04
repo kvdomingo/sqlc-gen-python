@@ -36,3 +36,18 @@ WHERE books.status = $1 AND books.author_id = sqlc.arg(class)::bigint;
 
 -- name: CountAuthors :one
 SELECT count(*) FROM authors;
+
+-- name: List :many
+SELECT tags FROM books;
+
+-- name: Int :execrows
+DELETE FROM books WHERE id = $1;
+
+-- name: Models :one
+SELECT * FROM authors WHERE id = $1;
+
+-- name: ListTags :many
+SELECT tags FROM books WHERE id = $1;
+
+-- name: PickAuthor :one
+SELECT * FROM authors WHERE name = $1;
