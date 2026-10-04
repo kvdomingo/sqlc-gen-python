@@ -192,15 +192,15 @@ message ImportFrom
 
 // Imports are always put at the top of the file, just after any module
 // comments and docstrings, and before module globals and constants.
-// 
+//
 // Imports should be grouped in the following order:
-// 
+//
 //     Standard library imports.
 //     Related third party imports.
 //     Local application/library specific imports.
-// 
+//
 // You should put a blank line between each group of imports.
-// 
+//
 // https://www.python.org/dev/peps/pep-0008/#imports
 message ImportGroup
 {
@@ -305,5 +305,3 @@ message Yield
 {
   Node value = 1 [json_name="value"];
 }
-
-

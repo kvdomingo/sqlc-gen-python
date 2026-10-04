@@ -16,4 +16,3 @@ sql:
           emit_sync_querier: true
           emit_async_querier: true
           emit_str_enum: true
-

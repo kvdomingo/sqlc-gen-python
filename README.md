@@ -24,7 +24,9 @@ sql:
 
 Option: `emit_pydantic_models`
 
-By default, `sqlc-gen-python` will emit `dataclasses` for the models. If you prefer to use [`pydantic`](https://docs.pydantic.dev/latest/) models, you can enable this option.
+By default, `sqlc-gen-python` will emit `dataclasses` for the models. If you
+prefer to use [`pydantic`](https://docs.pydantic.dev/latest/) models, you can
+enable this option.
 
 with `emit_pydantic_models`
 
@@ -53,11 +55,15 @@ Option: `emit_str_enum`
 
 `enum.StrEnum` was introduce in Python 3.11.
 
-`enum.StrEnum` is a subclass of `str` that is also a subclass of `Enum`. This allows for the use of `Enum` values as strings, compared to strings, or compared to other `enum.StrEnum` types.
+`enum.StrEnum` is a subclass of `str` that is also a subclass of `Enum`. This
+allows for the use of `Enum` values as strings, compared to strings, or compared
+to other `enum.StrEnum` types.
 
-This is convenient for type checking and validation, as well as for serialization and deserialization.
+This is convenient for type checking and validation, as well as for
+serialization and deserialization.
 
-By default, `sqlc-gen-python` will emit `(str, enum.Enum)` for the enum classes. If you prefer to use `enum.StrEnum`, you can enable this option.
+By default, `sqlc-gen-python` will emit `(str, enum.Enum)` for the enum classes.
+If you prefer to use `enum.StrEnum`, you can enable this option.
 
 with `emit_str_enum`
 

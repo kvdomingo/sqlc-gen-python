@@ -13,7 +13,7 @@ from booktest import models
 
 
 BOOKS_BY_TAGS = """-- name: books_by_tags \\:many
-SELECT 
+SELECT
   book_id,
   title,
   name,
