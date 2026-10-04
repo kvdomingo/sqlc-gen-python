@@ -28,7 +28,7 @@ jobs:
       contents: write
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -78,11 +78,11 @@ jobs:
         if: steps.version.outputs.version
         run: |
           mkdir -p bin
-          cd plugin && GOOS=wasip1 GOARCH=wasm go build -o ../bin/alt-sqlc-gen-python.wasm main.go
+          cd plugin && GOOS=wasip1 GOARCH=wasm go build -o ../bin/sqlc-gen-python.wasm main.go
 
       - name: Generate checksum
         if: steps.version.outputs.version
-        run: sha256sum bin/alt-sqlc-gen-python.wasm > bin/alt-sqlc-gen-python.wasm.sha256
+        run: sha256sum bin/sqlc-gen-python.wasm > bin/sqlc-gen-python.wasm.sha256
 
       - name: Create GitHub release
         if: steps.version.outputs.version
@@ -91,8 +91,8 @@ jobs:
             --target "${GITHUB_SHA}" \
             --title "${VERSION}" \
             --generate-notes \
-            bin/alt-sqlc-gen-python.wasm \
-            bin/alt-sqlc-gen-python.wasm.sha256
+            bin/sqlc-gen-python.wasm \
+            bin/sqlc-gen-python.wasm.sha256
         env:
           VERSION: ${{ steps.version.outputs.version }}
           GH_TOKEN: ${{ github.token }}
