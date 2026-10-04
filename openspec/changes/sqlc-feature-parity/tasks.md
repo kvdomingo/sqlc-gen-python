@@ -127,8 +127,8 @@
       and wrap every row value in `cast(<annotation>, row[i])`. Land it as its
       own commit that regenerates all fixtures and `examples/`, and verify
       `make test` and `cd examples && sqlc diff` pass
-- [x] 6.3 Add `emit_generic_querier`: emit `class Querier[T: <union>]` and
-      `class AsyncQuerier[T: <union>]` with `_conn: T` and `conn: T`, with the
+- [x] 6.3 Add `emit_generic_querier`: emit `class Querier[_ConnT: <union>]` and
+      `class AsyncQuerier[_ConnT: <union>]` with `_conn: _ConnT` and `conn: _ConnT`, with the
       bound in the active syntax. Verify with a new fixture
       `testdata/emit_generic_querier` (in typing and modern syntax) plus a
       `_check.py` where `reveal_type(Querier(session)._conn)` is `Session` and a

@@ -273,7 +273,7 @@ One proto change, regenerated once, covers every feature that needs new syntax:
 - `BinOp` with a `BitOr` operator, for `X | None`
 - a `Constant.ellipsis` oneof case, for protocol stubs
 - `ClassDef.type_params` (a repeated `TypeVar{name, bound}`), printed as
-  `[T: <bound>]` after the class name, for generic queriers
+  `[_ConnT: <bound>]` after the class name, for generic queriers
 - `Tuple`, for `Union[A, B]` subscripts
 - `UnaryOp` with a `Not` operator, for the `if not arg:` guard of
   `:copyfrom`/`:batchexec`
@@ -345,7 +345,7 @@ and parameter arguments, so method bodies do not change. One typing consequence:
 subscripted SQLAlchemy type is evaluated at runtime.
 
 With `emit_generic_querier`, the same union becomes the bound of a PEP 695 type
-parameter: `class Querier[T: <union>]`, with `_conn: T` and `conn: T`. The union
+parameter: `class Querier[_ConnT: <union>]`, with `_conn: _ConnT` and `conn: _ConnT`. The union
 is spelled by `Annotation(syntax)` (decision 15). The class body is otherwise
 identical, so the method builder (task 6.1) takes no notice of the flag, and
 only `querierClassDef`/`asyncQuerierClassDef` branch on it. It is opt-in, not

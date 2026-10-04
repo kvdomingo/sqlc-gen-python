@@ -165,10 +165,10 @@ typed as `Session`. Type-checking the output needs mypy 1.12+ or a recent
 pyright.
 
 ```py
-class Querier[T: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]]:
-    _conn: T
+class Querier[_ConnT: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]]:
+    _conn: _ConnT
 
-    def __init__(self, conn: T):
+    def __init__(self, conn: _ConnT):
         self._conn = conn
 ```
 

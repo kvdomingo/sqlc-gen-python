@@ -12,6 +12,7 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/metadata"
 	"github.com/sqlc-dev/plugin-sdk-go/plugin"
 	"github.com/sqlc-dev/plugin-sdk-go/sdk"
+	"golang.org/x/text/unicode/norm"
 
 	pyast "github.com/sqlc-dev/sqlc-gen-python/internal/ast"
 	"github.com/sqlc-dev/sqlc-gen-python/internal/inflection"
@@ -398,6 +399,7 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 	qs := make([]Query, 0, len(req.Queries))
 	moduleNames := conf.moduleNames()
 	methodOwners := map[string]string{}
+	constantOwners := map[string]string{}
 	for _, query := range req.Queries {
 		if query.Name == "" {
 			continue
@@ -417,16 +419,24 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 		if _, ok := moduleNames[defName]; ok {
 			defName += "_"
 		}
-		if other, ok := methodOwners[defName]; ok {
+		// Python NFKC-normalises identifiers; each query file is its own module.
+		methodKey := query.Filename + "\x00" + norm.NFKC.String(defName)
+		if other, ok := methodOwners[methodKey]; ok {
 			return nil, fmt.Errorf("queries %s and %s both generate method %s", other, query.Name, defName)
 		}
-		methodOwners[defName] = query.Name
+		methodOwners[methodKey] = query.Name
+		constantName := strings.ToUpper(methodName)
+		constantKey := query.Filename + "\x00" + norm.NFKC.String(constantName)
+		if other, ok := constantOwners[constantKey]; ok {
+			return nil, fmt.Errorf("queries %s and %s both generate constant %s", other, query.Name, constantName)
+		}
+		constantOwners[constantKey] = query.Name
 
 		gq := Query{
 			Cmd:          query.Cmd,
 			Comments:     queryComments(query.Comments),
 			MethodName:   defName,
-			ConstantName: strings.ToUpper(methodName),
+			ConstantName: constantName,
 			SQL:          sqlalchemySQL(query.Text, req.Settings.Engine),
 			SourceName:   query.Filename,
 		}

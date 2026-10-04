@@ -31,8 +31,8 @@ wait on unmerged upstream PRs (#83, #89, #92, #95, #100, #103, #105).
 - New `emit_aware_datetime` option: annotate `timestamptz` columns and
   parameters as `pydantic.AwareDatetime`. It requires `emit_pydantic_models`.
 - New `emit_generic_querier` option: emit `Querier` and `AsyncQuerier` as PEP
-  695 generic classes (`class Querier[T: Connection | Session]`) with
-  `_conn: T`, so `Querier(session)._conn` is typed as `Session`. It requires
+  695 generic classes (`class Querier[_ConnT: Connection | Session]`) with
+  `_conn: _ConnT`, so `Querier(session)._conn` is typed as `Session`. It requires
   Python 3.12+.
 - New `emit_querier_protocol` option: emit `QuerierProtocol` and
   `AsyncQuerierProtocol` (`typing.Protocol`) classes. They mirror the generated
