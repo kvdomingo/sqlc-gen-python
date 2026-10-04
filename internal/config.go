@@ -106,6 +106,9 @@ func (o *Override) parse(defaultSchema string) error {
 		return errors.New("py_type must be a bare name when py_import is set")
 	}
 	if o.Column == "" {
+		if canonical, ok := pgTypeAliases[o.DBType]; ok {
+			o.DBType = canonical
+		}
 		return nil
 	}
 	parts := strings.Split(o.Column, ".")
@@ -123,6 +126,48 @@ func (o *Override) parse(defaultSchema string) error {
 		}
 	}
 	return nil
+}
+
+// pgTypeAliases maps the SQL spellings of built-in types to the names sqlc
+// reports for columns.
+var pgTypeAliases = map[string]string{
+	"bigint":                      "int8",
+	"integer":                     "int4",
+	"int":                         "int4",
+	"smallint":                    "int2",
+	"boolean":                     "bool",
+	"real":                        "float4",
+	"double precision":            "float8",
+	"decimal":                     "numeric",
+	"character varying":           "varchar",
+	"character":                   "bpchar",
+	"char":                        "bpchar",
+	"timestamp without time zone": "timestamp",
+	"timestamp with time zone":    "timestamptz",
+	"time without time zone":      "time",
+	"time with time zone":         "timetz",
+}
+
+// moduleNames are the module-level names a querier method body may read.
+// A parameter with one of these names would shadow it.
+func (c Config) moduleNames() map[string]struct{} {
+	names := map[string]struct{}{
+		"self": {}, "sqlalchemy": {}, "models": {}, "errors": {},
+		"cast": {}, "Any": {}, "List": {}, "Optional": {},
+	}
+	for m := range stdlibModules {
+		names[m] = struct{}{}
+	}
+	for _, o := range c.Overrides {
+		if o.PyImport != "" {
+			names[o.PyType] = struct{}{}
+		}
+		for _, m := range typeModules(o.PyType) {
+			top, _, _ := strings.Cut(m, ".")
+			names[top] = struct{}{}
+		}
+	}
+	return names
 }
 
 func globMatch(pattern, name string) bool {

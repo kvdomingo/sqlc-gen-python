@@ -406,6 +406,7 @@ func queryComments(comments []string) []string {
 
 func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([]Query, error) {
 	qs := make([]Query, 0, len(req.Queries))
+	moduleNames := conf.moduleNames()
 	for _, query := range req.Queries {
 		if query.Name == "" {
 			continue
@@ -453,9 +454,18 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 			}}
 		} else {
 			args := make([]QueryValue, 0, len(query.Params))
+			seen := map[string]int{}
 			for _, p := range query.Params {
+				name := pyIdent(paramName(p), conf, nil)
+				if _, ok := moduleNames[name]; ok {
+					name += "_"
+				}
+				seen[name]++
+				if n := seen[name]; n > 1 {
+					name = fmt.Sprintf("%s_%d", name, n)
+				}
 				args = append(args, QueryValue{
-					Name: pyIdent(paramName(p), conf, nil),
+					Name: name,
 					Typ:  makePyType(req, conf, p.Column),
 				})
 			}

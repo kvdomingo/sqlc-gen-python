@@ -1,6 +1,7 @@
 package python
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 
@@ -118,10 +119,22 @@ func (f *pyFile) typeName(t pyType) *pyast.Node {
 		}
 		return poet.Name(t.InnerType)
 	}
-	if i := strings.LastIndex(t.InnerType, "."); i > 0 {
-		f.importModule(t.InnerType[:i])
+	for _, module := range typeModules(t.InnerType) {
+		f.importModule(module)
 	}
 	return poet.Name(t.InnerType)
+}
+
+var dottedNamePattern = regexp.MustCompile(`[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+`)
+
+// typeModules returns the module of every dotted name in a type expression,
+// so "dict[str, decimal.Decimal]" needs decimal.
+func typeModules(typ string) []string {
+	var modules []string
+	for _, name := range dottedNamePattern.FindAllString(typ, -1) {
+		modules = append(modules, name[:strings.LastIndex(name, ".")])
+	}
+	return modules
 }
 
 func (f *pyFile) annotation(t pyType) *pyast.Node {

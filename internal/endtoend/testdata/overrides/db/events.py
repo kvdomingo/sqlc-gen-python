@@ -2,8 +2,11 @@
 # versions:
 #   sqlc v1.31.1
 # source: events.sql
-from typing import List, Optional, Union, cast
+import decimal
+import uuid
+from typing import Iterator, List, Optional, Union, cast
 
+import my_lib
 import my_lib.types
 import sqlalchemy
 import sqlalchemy.orm
@@ -12,7 +15,12 @@ from db import models
 
 
 CREATE_EVENT = """-- name: create_event \\:one
-INSERT INTO events (payload, extra) VALUES (:p1, :p2) RETURNING id, payload, extra, history
+INSERT INTO events (payload, extra) VALUES (:p1, :p2) RETURNING id, payload, extra, history, score, rank
+"""
+
+
+LIST_EVENTS_BY_RANK = """-- name: list_events_by_rank \\:many
+SELECT id, payload, extra, history, score, rank FROM events WHERE rank > :p1 AND rank < :p2
 """
 
 
@@ -31,4 +39,18 @@ class Querier:
             payload=cast(my_lib.types.Payload, row[1]),
             extra=cast(Optional[my_lib.types.Payload], row[2]),
             history=cast(Optional[List[my_lib.types.Payload]], row[3]),
+            score=cast(my_lib.Box[decimal.Decimal], row[4]),
+            rank=cast(dict[str, uuid.UUID], row[5]),
         )
+
+    def list_events_by_rank(self, *, rank: dict[str, uuid.UUID], rank_2: dict[str, uuid.UUID]) -> Iterator[models.Event]:
+        result = self._conn.execute(sqlalchemy.text(LIST_EVENTS_BY_RANK), {"p1": rank, "p2": rank_2})
+        for row in result:
+            yield models.Event(
+                id=cast(int, row[0]),
+                payload=cast(my_lib.types.Payload, row[1]),
+                extra=cast(Optional[my_lib.types.Payload], row[2]),
+                history=cast(Optional[List[my_lib.types.Payload]], row[3]),
+                score=cast(my_lib.Box[decimal.Decimal], row[4]),
+                rank=cast(dict[str, uuid.UUID], row[5]),
+            )

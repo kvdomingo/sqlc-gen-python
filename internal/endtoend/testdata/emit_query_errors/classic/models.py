@@ -10,3 +10,10 @@ class Author:
     id: int
     name: str
     bio: Optional[str]
+
+
+@dataclasses.dataclass()
+class Job:
+    id: int
+    errors: str
+    cast: Optional[str]

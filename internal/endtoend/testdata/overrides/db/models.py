@@ -2,10 +2,13 @@
 # versions:
 #   sqlc v1.31.1
 import dataclasses
+import decimal
+import uuid
 from typing import List, Optional
 from uuid import UUID
 
 import my_ids
+import my_lib
 import my_lib.types
 
 
@@ -22,6 +25,8 @@ class Event:
     payload: my_lib.types.Payload
     extra: Optional[my_lib.types.Payload]
     history: Optional[List[my_lib.types.Payload]]
+    score: my_lib.Box[decimal.Decimal]
+    rank: dict[str, uuid.UUID]
 
 
 @dataclasses.dataclass()

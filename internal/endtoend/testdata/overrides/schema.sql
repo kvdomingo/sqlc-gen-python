@@ -14,5 +14,7 @@ CREATE TABLE events (
   id      BIGSERIAL PRIMARY KEY,
   payload jsonb NOT NULL,
   extra   jsonb,
-  history jsonb[]
+  history jsonb[],
+  score   double precision NOT NULL,
+  rank    bigint NOT NULL
 );

@@ -12,6 +12,11 @@ import sqlalchemy.orm
 from classic import errors, models
 
 
+ADD_JOB = """-- name: add_job \\:one
+INSERT INTO jobs (errors, "cast") VALUES (:p1, :p2) RETURNING id, errors, "cast"
+"""
+
+
 CREATE_AUTHOR = """-- name: create_author \\:one
 INSERT INTO authors (name, bio) VALUES (:p1, :p2) RETURNING id, name, bio
 """
@@ -37,11 +42,27 @@ SELECT id, name, bio FROM authors ORDER BY name
 """
 
 
+LIST_JOBS_IN_RANGE = """-- name: list_jobs_in_range \\:many
+SELECT id, errors, "cast" FROM jobs WHERE id > :p1 AND id < :p2
+"""
+
+
 class Querier:
     _conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]
 
     def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
+
+    def add_job(self, *, errors_: str, cast_: Optional[str]) -> Optional[models.Job]:
+        with errors._wrap_errors("add_job"):
+            row = self._conn.execute(sqlalchemy.text(ADD_JOB), {"p1": errors_, "p2": cast_}).first()
+            if row is None:
+                return None
+            return models.Job(
+                id=cast(int, row[0]),
+                errors=cast(str, row[1]),
+                cast=cast(Optional[str], row[2]),
+            )
 
     def create_author(self, *, name: str, bio: Optional[str]) -> Optional[models.Author]:
         """Insert an author."""
@@ -82,12 +103,33 @@ class Querier:
                     bio=cast(Optional[str], row[2]),
                 )
 
+    def list_jobs_in_range(self, *, id: int, id_2: int) -> Iterator[models.Job]:
+        with errors._wrap_errors("list_jobs_in_range"):
+            result = self._conn.execute(sqlalchemy.text(LIST_JOBS_IN_RANGE), {"p1": id, "p2": id_2})
+            for row in result:
+                yield models.Job(
+                    id=cast(int, row[0]),
+                    errors=cast(str, row[1]),
+                    cast=cast(Optional[str], row[2]),
+                )
+
 
 class AsyncQuerier:
     _conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]
 
     def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
+
+    async def add_job(self, *, errors_: str, cast_: Optional[str]) -> Optional[models.Job]:
+        with errors._wrap_errors("add_job"):
+            row = (await self._conn.execute(sqlalchemy.text(ADD_JOB), {"p1": errors_, "p2": cast_})).first()
+            if row is None:
+                return None
+            return models.Job(
+                id=cast(int, row[0]),
+                errors=cast(str, row[1]),
+                cast=cast(Optional[str], row[2]),
+            )
 
     async def create_author(self, *, name: str, bio: Optional[str]) -> Optional[models.Author]:
         """Insert an author."""
@@ -126,4 +168,14 @@ class AsyncQuerier:
                     id=cast(int, row[0]),
                     name=cast(str, row[1]),
                     bio=cast(Optional[str], row[2]),
+                )
+
+    async def list_jobs_in_range(self, *, id: int, id_2: int) -> AsyncIterator[models.Job]:
+        with errors._wrap_errors("list_jobs_in_range"):
+            result = await self._conn.stream(sqlalchemy.text(LIST_JOBS_IN_RANGE), {"p1": id, "p2": id_2})
+            async for row in result:
+                yield models.Job(
+                    id=cast(int, row[0]),
+                    errors=cast(str, row[1]),
+                    cast=cast(Optional[str], row[2]),
                 )

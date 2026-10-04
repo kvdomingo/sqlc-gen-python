@@ -10,3 +10,9 @@ SELECT * FROM authors WHERE id = $1;
 
 -- name: DeleteAuthor :exec
 DELETE FROM authors WHERE id = $1;
+
+-- name: AddJob :one
+INSERT INTO jobs (errors, "cast") VALUES ($1, $2) RETURNING *;
+
+-- name: ListJobsInRange :many
+SELECT * FROM jobs WHERE id > $1 AND id < $2;

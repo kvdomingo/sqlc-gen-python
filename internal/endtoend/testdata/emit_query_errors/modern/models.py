@@ -9,3 +9,10 @@ class Author:
     id: int
     name: str
     bio: str | None
+
+
+@dataclasses.dataclass()
+class Job:
+    id: int
+    errors: str
+    cast: str | None
