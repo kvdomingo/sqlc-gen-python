@@ -397,6 +397,7 @@ func queryComments(comments []string) []string {
 func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([]Query, error) {
 	qs := make([]Query, 0, len(req.Queries))
 	moduleNames := conf.moduleNames()
+	methodOwners := map[string]string{}
 	for _, query := range req.Queries {
 		if query.Name == "" {
 			continue
@@ -416,6 +417,10 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 		if _, ok := moduleNames[defName]; ok {
 			defName += "_"
 		}
+		if other, ok := methodOwners[defName]; ok {
+			return nil, fmt.Errorf("queries %s and %s both generate method %s", other, query.Name, defName)
+		}
+		methodOwners[defName] = query.Name
 
 		gq := Query{
 			Cmd:          query.Cmd,
@@ -1071,8 +1076,8 @@ func (b *querierBuilder) classes(queries []Query) ([]*pyast.Node, error) {
 	cls := &pyast.ClassDef{Name: name}
 	connType := b.connType()
 	if b.conf.EmitGenericQuerier {
-		cls.TypeParams = []*pyast.TypeVar{{Name: "T", Bound: connType}}
-		connType = poet.Name("T")
+		cls.TypeParams = []*pyast.TypeVar{{Name: "_ConnT", Bound: connType}}
+		connType = poet.Name("_ConnT")
 	}
 	cls.Body = append(cls.Body,
 		poet.Node(&pyast.AnnAssign{Target: &pyast.Name{Id: "_conn"}, Annotation: connType}),

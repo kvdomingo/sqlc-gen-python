@@ -146,10 +146,10 @@ class AsyncQuerierProtocol(Protocol):
     async def set_book_title(self, *, id: int, title: str) -> None: ...
 
 
-class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
-    _conn: T
+class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
+    _conn: _ConnT
 
-    def __init__(self, conn: T):
+    def __init__(self, conn: _ConnT):
         self._conn = conn
 
     def create_author(self, *, name: str, bio: str | None) -> models.Author | None:
@@ -276,10 +276,10 @@ class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
             self._conn.execute(sqlalchemy.text(SET_BOOK_TITLE), {"p1": id, "p2": title})
 
 
-class AsyncQuerier[T: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession]:
-    _conn: T
+class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession]:
+    _conn: _ConnT
 
-    def __init__(self, conn: T):
+    def __init__(self, conn: _ConnT):
         self._conn = conn
 
     async def create_author(self, *, name: str, bio: str | None) -> models.Author | None:

@@ -26,12 +26,19 @@ SELECT id, name, bio FROM authors ORDER BY name
 """
 
 
+T = """-- name: t \\:one
+SELECT name FROM authors WHERE id = :p1
+"""
+
+
 class QuerierProtocol(Protocol):
     def delete_author(self, *, id: int) -> int: ...
 
     def get_author(self, *, id: int) -> Optional[models.Author]: ...
 
     def list_authors(self) -> Iterator[models.Author]: ...
+
+    def t(self, *, id: int) -> Optional[str]: ...
 
 
 class AsyncQuerierProtocol(Protocol):
@@ -41,11 +48,13 @@ class AsyncQuerierProtocol(Protocol):
 
     def list_authors(self) -> AsyncIterator[models.Author]: ...
 
+    async def t(self, *, id: int) -> Optional[str]: ...
 
-class Querier[T: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]]:
-    _conn: T
 
-    def __init__(self, conn: T):
+class Querier[_ConnT: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]]:
+    _conn: _ConnT
+
+    def __init__(self, conn: _ConnT):
         self._conn = conn
 
     def delete_author(self, *, id: int) -> int:
@@ -71,11 +80,17 @@ class Querier[T: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]]:
                 bio=cast(Optional[str], row[2]),
             )
 
+    def t(self, *, id: int) -> Optional[str]:
+        row = self._conn.execute(sqlalchemy.text(T), {"p1": id}).first()
+        if row is None:
+            return None
+        return cast(str, row[0])
 
-class AsyncQuerier[T: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]]:
-    _conn: T
 
-    def __init__(self, conn: T):
+class AsyncQuerier[_ConnT: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]]:
+    _conn: _ConnT
+
+    def __init__(self, conn: _ConnT):
         self._conn = conn
 
     async def delete_author(self, *, id: int) -> int:
@@ -100,3 +115,9 @@ class AsyncQuerier[T: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.e
                 name=cast(str, row[1]),
                 bio=cast(Optional[str], row[2]),
             )
+
+    async def t(self, *, id: int) -> Optional[str]:
+        row = (await self._conn.execute(sqlalchemy.text(T), {"p1": id})).first()
+        if row is None:
+            return None
+        return cast(str, row[0])

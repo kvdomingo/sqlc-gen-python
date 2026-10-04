@@ -198,10 +198,10 @@ class AsyncQuerierProtocol(Protocol):
     async def pick_author(self, *, name: str) -> models.Author | None: ...
 
 
-class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
-    _conn: T
+class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
+    _conn: _ConnT
 
-    def __init__(self, conn: T):
+    def __init__(self, conn: _ConnT):
         self._conn = conn
 
     def count_authors(self) -> int | None:
@@ -372,10 +372,10 @@ class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
             )
 
 
-class AsyncQuerier[T: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession]:
-    _conn: T
+class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession]:
+    _conn: _ConnT
 
-    def __init__(self, conn: T):
+    def __init__(self, conn: _ConnT):
         self._conn = conn
 
     async def count_authors(self) -> int | None:
