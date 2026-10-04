@@ -30,15 +30,15 @@ output. Only PostgreSQL is supported.
 
 ## Usage
 
-Each GitHub release publishes `alt-sqlc-gen-python.wasm` and a matching
-`alt-sqlc-gen-python.wasm.sha256`. Pin both in `sqlc.yaml`:
+Each GitHub release publishes `sqlc-gen-python.wasm` and a matching
+`sqlc-gen-python.wasm.sha256`. Pin both in `sqlc.yaml`:
 
 ```yaml
 version: "2"
 plugins:
   - name: py
     wasm:
-      url: https://github.com/kvdomingo/sqlc-gen-python/releases/download/v1.0.1/alt-sqlc-gen-python.wasm
+      url: https://github.com/kvdomingo/sqlc-gen-python/releases/download/v1.0.1/sqlc-gen-python.wasm
       sha256: 3e9767af784b728ec9bd4499619721e5dabdebeb21cf3c7fe86a045d865584d1
 sql:
   - schema: "schema.sql"
@@ -503,8 +503,8 @@ Releases are automated by `.github/workflows/release.yml`. On every push to
 | `type!: …`, or `BREAKING CHANGE:` in the body | major |
 | anything else | no release |
 
-It then builds `alt-sqlc-gen-python.wasm`, writes its sha256 to
-`alt-sqlc-gen-python.wasm.sha256`, and creates a GitHub release tagged
+It then builds `sqlc-gen-python.wasm`, writes its sha256 to
+`sqlc-gen-python.wasm.sha256`, and creates a GitHub release tagged
 `vX.Y.Z` with both files and generated notes. To force a bump, run the
 workflow manually with `bump` set to `patch`, `minor` or `major`.
 
