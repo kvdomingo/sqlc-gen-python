@@ -1,0 +1,2 @@
+# package py
+error generating code: error generating output: queries GetIid and GetIıd both generate constant GET_IID

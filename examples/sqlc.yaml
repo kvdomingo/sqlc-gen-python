@@ -2,8 +2,7 @@ version: '2'
 plugins:
 - name: py
   wasm:
-    url: https://downloads.sqlc.dev/plugin/sqlc-gen-python_1.2.0.wasm
-    sha256: a6c5d174c407007c3717eea36ff0882744346e6ba991f92f71d6ab2895204c0e
+    url: file://../bin/sqlc-gen-python.wasm
 sql:
 - schema: "src/authors/schema.sql"
   queries: "src/authors/query.sql"
@@ -46,3 +45,32 @@ sql:
       package: ondeck
       emit_async_querier: true
       query_parameter_limit: 5
+- schema: "src/library/schema.sql"
+  queries: "src/library/query.sql"
+  engine: postgresql
+  codegen:
+  - out: src/library
+    plugin: py
+    options:
+      package: library
+      emit_sync_querier: true
+      emit_async_querier: true
+      emit_querier_protocol: true
+      emit_query_errors: true
+- schema: "src/library_modern/schema.sql"
+  queries: "src/library_modern/query.sql"
+  engine: postgresql
+  codegen:
+  - out: src/library_modern
+    plugin: py
+    options:
+      package: library_modern
+      emit_sync_querier: true
+      emit_async_querier: true
+      emit_querier_protocol: true
+      emit_query_errors: true
+      emit_pydantic_models: true
+      emit_str_enum: true
+      emit_modern_types: true
+      emit_aware_datetime: true
+      emit_generic_querier: true

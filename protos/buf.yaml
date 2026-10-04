@@ -1,5 +1,5 @@
 version: v1
-name: github.com/sqlc-dev/sqlc-gen-python
+name: github.com/kvdomingo/sqlc-gen-python
 breaking:
   use:
     - FILE

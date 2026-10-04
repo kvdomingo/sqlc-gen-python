@@ -4,4 +4,3 @@ CREATE TABLE bar (
   name2 text not null,
   name3 text not null,
   primary key (id));
-
