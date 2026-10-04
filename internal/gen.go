@@ -238,17 +238,23 @@ func enumMemberNames(conf Config, vals []string) []string {
 		} else if name[0] >= '0' && name[0] <= '9' {
 			name = "VALUE_" + name
 		}
-		if used[name] {
-			k := 2
-			for used[fmt.Sprintf("%s_%d", name, k)] {
-				k++
-			}
-			name = fmt.Sprintf("%s_%d", name, k)
-		}
-		used[name] = true
-		names[i] = name
+		names[i] = uniqueName(used, name)
 	}
 	return names
+}
+
+// uniqueName returns name, or name with the lowest free "_N" suffix, and
+// marks the result used.
+func uniqueName(used map[string]bool, name string) string {
+	if used[name] {
+		k := 2
+		for used[fmt.Sprintf("%s_%d", name, k)] {
+			k++
+		}
+		name = fmt.Sprintf("%s_%d", name, k)
+	}
+	used[name] = true
+	return name
 }
 
 func buildEnums(conf Config, req *plugin.GenerateRequest) []Enum {
@@ -348,25 +354,10 @@ func columnsToStruct(req *plugin.GenerateRequest, conf Config, name string, colu
 	gs := Struct{
 		Name: name,
 	}
-	seen := map[string]int32{}
-	suffixes := map[int32]int32{}
+	used := map[string]bool{}
 	for i, c := range columns {
-		colName := columnName(c.Column, i)
-		fieldName := pyIdent(colName, conf, nil)
-		// Track suffixes by the ID of the column, so that columns referring to
-		// the same numbered parameter can be reused.
-		var suffix int32
-		if o, ok := suffixes[c.id]; ok {
-			suffix = o
-		} else if v := seen[colName]; v > 0 {
-			suffix = v + 1
-		}
-		suffixes[c.id] = suffix
-		if suffix > 0 {
-			fieldName = fmt.Sprintf("%s_%d", fieldName, suffix)
-		}
 		field := Field{
-			Name: fieldName,
+			Name: uniqueName(used, pyIdent(columnName(c.Column, i), conf, nil)),
 			Type: makePyType(req, conf, c.Column),
 		}
 		if c.EmbedTable != nil {
@@ -379,7 +370,6 @@ func columnsToStruct(req *plugin.GenerateRequest, conf Config, name string, colu
 			}
 		}
 		gs.Fields = append(gs.Fields, field)
-		seen[colName]++
 	}
 	return &gs
 }
@@ -454,18 +444,14 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 			}}
 		} else {
 			args := make([]QueryValue, 0, len(query.Params))
-			seen := map[string]int{}
+			used := map[string]bool{}
 			for _, p := range query.Params {
 				name := pyIdent(paramName(p), conf, nil)
 				if _, ok := moduleNames[name]; ok {
 					name += "_"
 				}
-				seen[name]++
-				if n := seen[name]; n > 1 {
-					name = fmt.Sprintf("%s_%d", name, n)
-				}
 				args = append(args, QueryValue{
-					Name: name,
+					Name: uniqueName(used, name),
 					Typ:  makePyType(req, conf, p.Column),
 				})
 			}

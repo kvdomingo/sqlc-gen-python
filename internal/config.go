@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/sqlc-dev/plugin-sdk-go/plugin"
@@ -154,21 +155,22 @@ func (c Config) moduleNames() map[string]struct{} {
 	names := map[string]struct{}{
 		"self": {}, "sqlalchemy": {}, "models": {}, "errors": {},
 		"cast": {}, "Any": {}, "List": {}, "Optional": {},
+		"list": {}, "int": {}, "float": {}, "bool": {}, "str": {}, "memoryview": {},
 	}
 	for m := range stdlibModules {
 		names[m] = struct{}{}
 	}
 	for _, o := range c.Overrides {
-		if o.PyImport != "" {
-			names[o.PyType] = struct{}{}
-		}
-		for _, m := range typeModules(o.PyType) {
-			top, _, _ := strings.Cut(m, ".")
-			names[top] = struct{}{}
+		for _, m := range rootNamePattern.FindAllStringSubmatch(o.PyType, -1) {
+			names[m[1]] = struct{}{}
 		}
 	}
 	return names
 }
+
+// rootNamePattern matches each name in a type expression that is not an
+// attribute, such as dict, str and uuid in "dict[str, uuid.UUID]".
+var rootNamePattern = regexp.MustCompile(`(?:^|[^.\w])([A-Za-z_]\w*)`)
 
 func globMatch(pattern, name string) bool {
 	ok, _ := path.Match(pattern, name)

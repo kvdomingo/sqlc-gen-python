@@ -7,5 +7,8 @@ CREATE TABLE authors (
 CREATE TABLE jobs (
   id     BIGSERIAL PRIMARY KEY,
   errors text NOT NULL,
-  "cast" text
+  "cast" text,
+  list   text[],
+  id_2   bigint,
+  dict   jsonb
 );

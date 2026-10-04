@@ -14,7 +14,7 @@ from modern import errors, models
 
 
 ADD_JOB = """-- name: add_job \\:one
-INSERT INTO jobs (errors, "cast") VALUES (:p1, :p2) RETURNING id, errors, "cast"
+INSERT INTO jobs (errors, "cast") VALUES (:p1, :p2) RETURNING id, errors, "cast", list, id_2, dict
 """
 
 
@@ -43,9 +43,28 @@ SELECT id, name, bio FROM authors ORDER BY name
 """
 
 
-LIST_JOBS_IN_RANGE = """-- name: list_jobs_in_range \\:many
-SELECT id, errors, "cast" FROM jobs WHERE id > :p1 AND id < :p2
+LIST_JOBS_BY_DICT = """-- name: list_jobs_by_dict \\:many
+SELECT id, errors, "cast", list, id_2, dict FROM jobs WHERE dict = :p1
 """
+
+
+LIST_JOBS_IN_RANGE = """-- name: list_jobs_in_range \\:many
+SELECT id, errors, "cast", list, id_2, dict FROM jobs WHERE id > :p1 AND id < :p2
+"""
+
+
+PROBE_JOBS = """-- name: probe_jobs \\:many
+SELECT id, id_2, id, list, dict FROM jobs WHERE list = :p1 AND id > :p2 AND id < :p3 AND id_2 = :p4
+"""
+
+
+@dataclasses.dataclass()
+class ProbeJobsRow:
+    id: int
+    id_2: int | None
+    id_3: int
+    list: list[str] | None
+    dict: dict[str, int] | None
 
 
 class Querier:
@@ -63,6 +82,9 @@ class Querier:
                 id=cast(int, row[0]),
                 errors=cast(str, row[1]),
                 cast=cast(str | None, row[2]),
+                list=cast(list[str] | None, row[3]),
+                id_2=cast(int | None, row[4]),
+                dict=cast(dict[str, int] | None, row[5]),
             )
 
     def create_author(self, *, name: str, bio: str | None) -> models.Author | None:
@@ -104,6 +126,19 @@ class Querier:
                     bio=cast(str | None, row[2]),
                 )
 
+    def list_jobs_by_dict(self, *, dict_: dict[str, int] | None) -> Iterator[models.Job]:
+        with errors._wrap_errors("list_jobs_by_dict"):
+            result = self._conn.execute(sqlalchemy.text(LIST_JOBS_BY_DICT), {"p1": dict_})
+            for row in result:
+                yield models.Job(
+                    id=cast(int, row[0]),
+                    errors=cast(str, row[1]),
+                    cast=cast(str | None, row[2]),
+                    list=cast(list[str] | None, row[3]),
+                    id_2=cast(int | None, row[4]),
+                    dict=cast(dict[str, int] | None, row[5]),
+                )
+
     def list_jobs_in_range(self, *, id: int, id_2: int) -> Iterator[models.Job]:
         with errors._wrap_errors("list_jobs_in_range"):
             result = self._conn.execute(sqlalchemy.text(LIST_JOBS_IN_RANGE), {"p1": id, "p2": id_2})
@@ -112,6 +147,26 @@ class Querier:
                     id=cast(int, row[0]),
                     errors=cast(str, row[1]),
                     cast=cast(str | None, row[2]),
+                    list=cast(list[str] | None, row[3]),
+                    id_2=cast(int | None, row[4]),
+                    dict=cast(dict[str, int] | None, row[5]),
+                )
+
+    def probe_jobs(self, *, list_: list[str] | None, id: int, id_2: int, id_2_2: int | None) -> Iterator[ProbeJobsRow]:
+        with errors._wrap_errors("probe_jobs"):
+            result = self._conn.execute(sqlalchemy.text(PROBE_JOBS), {
+                "p1": list_,
+                "p2": id,
+                "p3": id_2,
+                "p4": id_2_2,
+            })
+            for row in result:
+                yield ProbeJobsRow(
+                    id=cast(int, row[0]),
+                    id_2=cast(int | None, row[1]),
+                    id_3=cast(int, row[2]),
+                    list=cast(list[str] | None, row[3]),
+                    dict=cast(dict[str, int] | None, row[4]),
                 )
 
 
@@ -130,6 +185,9 @@ class AsyncQuerier:
                 id=cast(int, row[0]),
                 errors=cast(str, row[1]),
                 cast=cast(str | None, row[2]),
+                list=cast(list[str] | None, row[3]),
+                id_2=cast(int | None, row[4]),
+                dict=cast(dict[str, int] | None, row[5]),
             )
 
     async def create_author(self, *, name: str, bio: str | None) -> models.Author | None:
@@ -171,6 +229,19 @@ class AsyncQuerier:
                     bio=cast(str | None, row[2]),
                 )
 
+    async def list_jobs_by_dict(self, *, dict_: dict[str, int] | None) -> AsyncIterator[models.Job]:
+        with errors._wrap_errors("list_jobs_by_dict"):
+            result = await self._conn.stream(sqlalchemy.text(LIST_JOBS_BY_DICT), {"p1": dict_})
+            async for row in result:
+                yield models.Job(
+                    id=cast(int, row[0]),
+                    errors=cast(str, row[1]),
+                    cast=cast(str | None, row[2]),
+                    list=cast(list[str] | None, row[3]),
+                    id_2=cast(int | None, row[4]),
+                    dict=cast(dict[str, int] | None, row[5]),
+                )
+
     async def list_jobs_in_range(self, *, id: int, id_2: int) -> AsyncIterator[models.Job]:
         with errors._wrap_errors("list_jobs_in_range"):
             result = await self._conn.stream(sqlalchemy.text(LIST_JOBS_IN_RANGE), {"p1": id, "p2": id_2})
@@ -179,4 +250,24 @@ class AsyncQuerier:
                     id=cast(int, row[0]),
                     errors=cast(str, row[1]),
                     cast=cast(str | None, row[2]),
+                    list=cast(list[str] | None, row[3]),
+                    id_2=cast(int | None, row[4]),
+                    dict=cast(dict[str, int] | None, row[5]),
+                )
+
+    async def probe_jobs(self, *, list_: list[str] | None, id: int, id_2: int, id_2_2: int | None) -> AsyncIterator[ProbeJobsRow]:
+        with errors._wrap_errors("probe_jobs"):
+            result = await self._conn.stream(sqlalchemy.text(PROBE_JOBS), {
+                "p1": list_,
+                "p2": id,
+                "p3": id_2,
+                "p4": id_2_2,
+            })
+            async for row in result:
+                yield ProbeJobsRow(
+                    id=cast(int, row[0]),
+                    id_2=cast(int | None, row[1]),
+                    id_3=cast(int, row[2]),
+                    list=cast(list[str] | None, row[3]),
+                    dict=cast(dict[str, int] | None, row[4]),
                 )

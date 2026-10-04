@@ -3,7 +3,7 @@ plugins:
   - name: py
     wasm:
       url: file://../../../../bin/sqlc-gen-python.wasm
-      sha256: "a4a7c14041cf6264a5d93853363ad066efce605e98fbefa1df7d4f444aab9ddb"
+      sha256: "ce0e573fd44101ba624985730f2121d5ab5c4c209c25005f8680e3ac9156d0fe"
 sql:
   - schema: schema.sql
     queries: query.sql
@@ -16,6 +16,9 @@ sql:
           emit_sync_querier: true
           emit_async_querier: true
           emit_query_errors: true
+          overrides:
+            - column: jobs.dict
+              py_type: dict[str, int]
       - plugin: py
         out: modern
         options:
@@ -23,4 +26,7 @@ sql:
           emit_sync_querier: true
           emit_async_querier: true
           emit_query_errors: true
+          overrides:
+            - column: jobs.dict
+              py_type: dict[str, int]
           emit_modern_types: true

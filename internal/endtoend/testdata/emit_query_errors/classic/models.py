@@ -2,7 +2,7 @@
 # versions:
 #   sqlc v1.31.1
 import dataclasses
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclasses.dataclass()
@@ -17,3 +17,6 @@ class Job:
     id: int
     errors: str
     cast: Optional[str]
+    list: Optional[List[str]]
+    id_2: Optional[int]
+    dict: Optional[dict[str, int]]

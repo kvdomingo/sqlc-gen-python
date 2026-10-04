@@ -16,3 +16,6 @@ class Job:
     id: int
     errors: str
     cast: str | None
+    list: list[str] | None
+    id_2: int | None
+    dict: dict[str, int] | None
