@@ -4,15 +4,15 @@ on:
     branches:
       - main
   pull_request:
-jobs:
 
+jobs:
   build:
     name: test
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:11
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -23,10 +23,10 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.14"
       - name: Install python dependencies
         working-directory: ./examples
         run: |
