@@ -53,7 +53,11 @@ jobs:
             fi
           fi
           latest=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          IFS=. read -r major minor patch <<< "${latest:-v0.0.0}"
+          if [[ -z "${latest}" ]]; then
+            echo "version=v1.0.0" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          IFS=. read -r major minor patch <<< "${latest}"
           major=${major#v}
           case "${bump}" in
             major) major=$((major + 1)); minor=0; patch=0 ;;
