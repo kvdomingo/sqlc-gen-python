@@ -61,6 +61,12 @@ func (w *writer) printNode(node *ast.Node, indent int32) {
 	case *ast.Node_Await:
 		w.printAwait(n.Await, indent)
 
+	case *ast.Node_BinOp:
+		w.printBinOp(n.BinOp, indent)
+
+	case *ast.Node_BitOr:
+		w.print("|")
+
 	case *ast.Node_Call:
 		w.printCall(n.Call, indent)
 
@@ -106,6 +112,9 @@ func (w *writer) printNode(node *ast.Node, indent int32) {
 	case *ast.Node_Keyword:
 		w.printKeyword(n.Keyword, indent)
 
+	case *ast.Node_ListComp:
+		w.printListComp(n.ListComp, indent)
+
 	case *ast.Node_Module:
 		w.printModule(n.Module, indent)
 
@@ -121,6 +130,20 @@ func (w *writer) printNode(node *ast.Node, indent int32) {
 	case *ast.Node_Subscript:
 		w.printSubscript(n.Subscript, indent)
 
+	case *ast.Node_Tuple:
+		w.printTuple(n.Tuple, indent)
+
+	case *ast.Node_UnaryOp:
+		w.printNode(n.UnaryOp.Op, indent)
+		w.print(" ")
+		w.printNode(n.UnaryOp.Operand, indent)
+
+	case *ast.Node_Not:
+		w.print("not")
+
+	case *ast.Node_With:
+		w.printWith(n.With, indent)
+
 	case *ast.Node_Yield:
 		w.printYield(n.Yield, indent)
 
@@ -132,10 +155,12 @@ func (w *writer) printNode(node *ast.Node, indent int32) {
 
 func (w *writer) printAnnAssign(aa *ast.AnnAssign, indent int32) {
 	if aa.Comment != "" {
-		w.print("# ")
-		w.print(aa.Comment)
-		w.print("\n")
-		w.printIndent(indent)
+		for _, line := range strings.Split(aa.Comment, "\n") {
+			w.print("# ")
+			w.print(line)
+			w.print("\n")
+			w.printIndent(indent)
+		}
 	}
 	w.printName(aa.Target, indent)
 	w.print(": ")
@@ -178,6 +203,14 @@ func (w *writer) printAsyncFunctionDef(afd *ast.AsyncFunctionDef, indent int32) 
 		Body:    afd.Body,
 		Returns: afd.Returns,
 	}, indent)
+}
+
+func (w *writer) printBinOp(b *ast.BinOp, indent int32) {
+	w.printNode(b.Left, indent)
+	w.print(" ")
+	w.printNode(b.Op, indent)
+	w.print(" ")
+	w.printNode(b.Right, indent)
 }
 
 func (w *writer) printAttribute(a *ast.Attribute, indent int32) {
@@ -227,6 +260,20 @@ func (w *writer) printClassDef(cd *ast.ClassDef, indent int32) {
 	}
 	w.print("class ")
 	w.print(cd.Name)
+	if len(cd.TypeParams) > 0 {
+		w.print("[")
+		for i, tp := range cd.TypeParams {
+			w.print(tp.Name)
+			if tp.Bound != nil {
+				w.print(": ")
+				w.printNode(tp.Bound, indent)
+			}
+			if i != len(cd.TypeParams)-1 {
+				w.print(", ")
+			}
+		}
+		w.print("]")
+	}
 	if len(cd.Bases) > 0 {
 		w.print("(")
 		for i, node := range cd.Bases {
@@ -238,6 +285,10 @@ func (w *writer) printClassDef(cd *ast.ClassDef, indent int32) {
 		w.print(")")
 	}
 	w.print(":\n")
+	if len(cd.Body) == 0 {
+		w.printIndent(indent + 1)
+		w.print("pass\n")
+	}
 	for i, node := range cd.Body {
 		if i != 0 {
 			if _, ok := node.Node.(*ast.Node_FunctionDef); ok {
@@ -253,14 +304,10 @@ func (w *writer) printClassDef(cd *ast.ClassDef, indent int32) {
 		// definition. Such a docstring becomes the __doc__ special
 		// attribute of that object.
 		if i == 0 {
-			if e, ok := node.Node.(*ast.Node_Expr); ok {
-				if c, ok := e.Expr.Value.Node.(*ast.Node_Constant); ok {
-					w.print(`""`)
-					w.printConstant(c.Constant, indent)
-					w.print(`""`)
-					w.print("\n")
-					continue
-				}
+			if doc, ok := docstring(node); ok {
+				w.printDocstring(doc)
+				w.print("\n")
+				continue
 			}
 		}
 		w.printNode(node, indent+1)
@@ -276,14 +323,19 @@ func (w *writer) printConstant(c *ast.Constant, indent int32) {
 	case *ast.Constant_None:
 		w.print("None")
 
+	case *ast.Constant_Ellipsis:
+		w.print("...")
+
 	case *ast.Constant_Str:
-		str := `"`
 		if strings.Contains(n.Str, "\n") {
-			str = `"""`
+			w.print(`"""`)
+			w.print(escapeTripleQuoted(n.Str))
+			w.print(`"""`)
+		} else {
+			w.print(`"`)
+			w.print(escapeQuoted(n.Str))
+			w.print(`"`)
 		}
-		w.print(str)
-		w.print(n.Str)
-		w.print(str)
 
 	default:
 		panic(n)
@@ -347,25 +399,19 @@ func (w *writer) printFor(n *ast.For, indent int32) {
 	w.print(" in ")
 	w.printNode(n.Iter, indent)
 	w.print(":\n")
-	for i, node := range n.Body {
-		w.printIndent(indent + 1)
-		w.printNode(node, indent+1)
-		if i != len(n.Body)-1 {
-			w.print("\n")
-		}
-	}
+	w.printBlock(n.Body, indent, false)
 }
 
 func (w *writer) printIf(i *ast.If, indent int32) {
 	w.print("if ")
 	w.printNode(i.Test, indent)
 	w.print(":\n")
-	for j, node := range i.Body {
-		w.printIndent(indent + 1)
-		w.printNode(node, indent+1)
-		if j != len(i.Body)-1 {
-			w.print("\n")
-		}
+	w.printBlock(i.Body, indent, false)
+	if len(i.OrElse) > 0 {
+		w.print("\n")
+		w.printIndent(indent)
+		w.print("else:\n")
+		w.printBlock(i.OrElse, indent, false)
 	}
 }
 
@@ -395,14 +441,104 @@ func (w *writer) printFunctionDef(fd *ast.FunctionDef, indent int32) {
 		w.print(" -> ")
 		w.printNode(fd.Returns, indent)
 	}
+	if len(fd.Body) == 1 && isEllipsis(fd.Body[0]) {
+		w.print(": ...")
+		return
+	}
 	w.print(":\n")
-	for i, node := range fd.Body {
+	w.printBlock(fd.Body, indent, true)
+}
+
+// printBlock prints body one level deeper than indent, without a trailing
+// newline after the last statement.
+func (w *writer) printBlock(body []*ast.Node, indent int32, allowDocstring bool) {
+	if len(body) == 0 {
 		w.printIndent(indent + 1)
-		w.printNode(node, indent+1)
-		if i != len(fd.Body)-1 {
+		w.print("pass")
+		return
+	}
+	for i, node := range body {
+		w.printIndent(indent + 1)
+		if doc, ok := docstring(node); ok && i == 0 && allowDocstring {
+			w.printDocstring(doc)
+		} else {
+			w.printNode(node, indent+1)
+		}
+		if i != len(body)-1 {
 			w.print("\n")
 		}
 	}
+}
+
+func docstring(node *ast.Node) (string, bool) {
+	e, ok := node.Node.(*ast.Node_Expr)
+	if !ok {
+		return "", false
+	}
+	c, ok := e.Expr.Value.Node.(*ast.Node_Constant)
+	if !ok {
+		return "", false
+	}
+	str, ok := c.Constant.Value.(*ast.Constant_Str)
+	if !ok {
+		return "", false
+	}
+	return str.Str, true
+}
+
+func isEllipsis(node *ast.Node) bool {
+	e, ok := node.Node.(*ast.Node_Expr)
+	if !ok {
+		return false
+	}
+	c, ok := e.Expr.Value.Node.(*ast.Node_Constant)
+	if !ok {
+		return false
+	}
+	_, ok = c.Constant.Value.(*ast.Constant_Ellipsis)
+	return ok
+}
+
+func (w *writer) printDocstring(s string) {
+	w.print(`"""`)
+	w.print(escapeTripleQuoted(s))
+	w.print(`"""`)
+}
+
+func escapeQuoted(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch r {
+		case '\\':
+			b.WriteString(`\\`)
+		case '"':
+			b.WriteString(`\"`)
+		case '\r':
+			b.WriteString(`\r`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// escapeTripleQuoted escapes a quote only where it would end the literal: when
+// it starts a run of three, or is the last character before the closing quotes.
+func escapeTripleQuoted(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c == '\\':
+			b.WriteString(`\\`)
+		case c == '\r':
+			b.WriteString(`\r`)
+		case c == '"' && (i == len(s)-1 || strings.HasPrefix(s[i+1:], `""`)):
+			b.WriteString(`\"`)
+		default:
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
 }
 
 func (w *writer) printImport(imp *ast.Import, indent int32) {
@@ -442,6 +578,22 @@ func (w *writer) printImportGroup(n *ast.ImportGroup, indent int32) {
 func (w *writer) printIs(i *ast.Is, indent int32) {
 	w.print("is")
 }
+func (w *writer) printListComp(lc *ast.ListComp, indent int32) {
+	w.print("[")
+	w.printNode(lc.Elt, indent)
+	for _, gen := range lc.Generators {
+		w.print(" for ")
+		w.printNode(gen.Target, indent)
+		w.print(" in ")
+		w.printNode(gen.Iter, indent)
+		for _, cond := range gen.Ifs {
+			w.print(" if ")
+			w.printNode(cond, indent)
+		}
+	}
+	w.print("]")
+}
+
 func (w *writer) printKeyword(k *ast.Keyword, indent int32) {
 	w.print(k.Arg)
 	w.print("=")
@@ -486,6 +638,31 @@ func (w *writer) printSubscript(ss *ast.Subscript, indent int32) {
 	w.printNode(ss.Slice, indent)
 	w.print("]")
 
+}
+
+func (w *writer) printTuple(t *ast.Tuple, indent int32) {
+	for i, elt := range t.Elts {
+		w.printNode(elt, indent)
+		if i != len(t.Elts)-1 {
+			w.print(", ")
+		}
+	}
+}
+
+func (w *writer) printWith(n *ast.With, indent int32) {
+	w.print("with ")
+	for i, item := range n.Items {
+		w.printNode(item.ContextExpr, indent)
+		if item.OptionalVars != nil {
+			w.print(" as ")
+			w.printNode(item.OptionalVars, indent)
+		}
+		if i != len(n.Items)-1 {
+			w.print(", ")
+		}
+	}
+	w.print(":\n")
+	w.printBlock(n.Body, indent, false)
 }
 
 func (w *writer) printYield(n *ast.Yield, indent int32) {

@@ -1,0 +1,35 @@
+version: "2"
+plugins:
+  - name: py
+    wasm:
+      url: file://../../../../bin/sqlc-gen-python.wasm
+      sha256: "052fc3c2963971e1945aa5dcf5ebbceae2e84b64f9207128220fb859aa66afaf"
+sql:
+  - schema: schema.sql
+    queries: queries
+    engine: postgresql
+    codegen:
+      - plugin: py
+        out: db
+        options:
+          package: db
+          emit_sync_querier: true
+          overrides:
+            - db_type: jsonb
+              py_type: my_lib.types.Payload
+            - db_type: jsonb
+              nullable: true
+              py_type: my_lib.types.Payload
+            - db_type: uuid
+              py_type: my_ids.Id
+            - column: "users.id"
+              py_type: my_ids.UserId
+            - column: "authors.id"
+              py_type: UUID
+              py_import: uuid
+            - db_type: bytea
+              py_type: bytes
+            - db_type: double precision
+              py_type: "my_lib.Box[decimal.Decimal]"
+            - db_type: bigint
+              py_type: "dict[str, uuid.UUID]"

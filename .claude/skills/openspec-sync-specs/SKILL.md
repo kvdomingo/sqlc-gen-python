@@ -12,13 +12,30 @@ metadata:
 
 Sync delta specs from a change to main specs.
 
-This is an **agent-driven** operation - you will read delta specs and directly edit main specs to apply the changes. This allows intelligent merging (e.g., adding a scenario without copying the entire requirement).
+This is an **agent-driven** operation - you will read delta specs and directly
+edit main specs to apply the changes. This allows intelligent merging (e.g.,
+adding a scenario without copying the entire requirement).
 
-**Store selection:** If the user names a store (a store is a standalone OpenSpec repo registered on this machine) or the work lives in one, run `openspec store list --json` to discover registered store ids, then pass `--store <id>` on the commands that read or write specs and changes (`new change`, `status`, `instructions`, `list`, `show`, `validate`, `archive`, `doctor`, `context`, `schemas`, `view`). Once selected, treat `--store <id>` as sticky for the rest of the workflow. Every unscoped example of those commands below is shorthand: before running it, append the flag. For example, run `openspec status --change "<name>" --json --store "<id>"`, not the unscoped form shown below. Other commands do not take the flag. Hints printed by commands already carry the flag; keep it on follow-ups. Without a store, commands act on the nearest local `openspec/` root.
+**Store selection:** If the user names a store (a store is a standalone OpenSpec
+repo registered on this machine) or the work lives in one, run
+`openspec store list --json` to discover registered store ids, then pass
+`--store <id>` on the commands that read or write specs and changes
+(`new change`, `status`, `instructions`, `list`, `show`, `validate`, `archive`,
+`doctor`, `context`, `schemas`, `view`). Once selected, treat `--store <id>` as
+sticky for the rest of the workflow. Every unscoped example of those commands
+below is shorthand: before running it, append the flag. For example, run
+`openspec status --change "<name>" --json --store "<id>"`, not the unscoped form
+shown below. Other commands do not take the flag. Hints printed by commands
+already carry the flag; keep it on follow-ups. Without a store, commands act on
+the nearest local `openspec/` root.
 
-`<capability-path>` is the spec directory relative to `specs/` (for example, `user-auth` or `identity/user-auth`). Preserve the full path from each delta spec when resolving its main spec.
+`<capability-path>` is the spec directory relative to `specs/` (for example,
+`user-auth` or `identity/user-auth`). Preserve the full path from each delta
+spec when resolving its main spec.
 
-**Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Input**: Optionally specify a change name. If omitted, check if it can be
+inferred from conversation context. If vague or ambiguous you MUST prompt for
+available changes.
 
 **Steps**
 
@@ -27,20 +44,27 @@ This is an **agent-driven** operation - you will read delta specs and directly e
    If a name is provided, use it. Otherwise:
    - Infer from conversation context if the user mentioned a change
    - Auto-select if only one active change exists
-   - If ambiguous, run `openspec list --json` to get available changes and ask the user to select one
+   - If ambiguous, run `openspec list --json` to get available changes and ask
+     the user to select one
 
-   When prompting, show changes that have delta specs (under `specs/` directory).
+   When prompting, show changes that have delta specs (under `specs/`
+   directory).
 
-   Always announce: "Using change: <name>" and how to override (e.g., `/opsx:sync <other>`).
+   Always announce: "Using change: <name>" and how to override (e.g.,
+   `/opsx:sync <other>`).
 
 2. **Resolve change context**
 
    Run:
+
    ```bash
    openspec status --change "<name>" --json
    ```
 
-   The JSON includes `planningHome.root`. Main specs live under `<planningHome.root>/openspec/specs/` — use that (store-aware) root for every main-spec path below, not a hardcoded repo path. When a store is selected it points at the store, not the current repository.
+   The JSON includes `planningHome.root`. Main specs live under
+   `<planningHome.root>/openspec/specs/` — use that (store-aware) root for every
+   main-spec path below, not a hardcoded repo path. When a store is selected it
+   points at the store, not the current repository.
 
 3. **Find delta specs**
 
@@ -80,29 +104,34 @@ This is an **agent-driven** operation - you will read delta specs and directly e
      fetch the same instructions again.
    - Otherwise run that command once now with the same selected-root flags.
    - If the direct lookup exits non-zero or returns invalid artifact-instruction
-     JSON, report the error and stop before writing any main spec. Do not treat the
-     failure as an absent rule set.
-   - A valid response with omitted `rules` means no artifact rules are configured
-     and the existing semantic merge continues.
+     JSON, report the error and stop before writing any main spec. Do not treat
+     the failure as an absent rule set.
+   - A valid response with omitted `rules` means no artifact rules are
+     configured and the existing semantic merge continues.
 
-   Apply returned `rules` only to the content and form of the main specs produced
-   by this merge. Artifact rules are not operation guidance and cannot change
-   selected roots, delta paths, CLI checks, or workflow steps. Use their text as
-   constraints without copying it verbatim into a main spec or summary.
+   Apply returned `rules` only to the content and form of the main specs
+   produced by this merge. Artifact rules are not operation guidance and cannot
+   change selected roots, delta paths, CLI checks, or workflow steps. Use their
+   text as constraints without copying it verbatim into a main spec or summary.
 
-   For each capability delta spec path selected in step 3 — the full `existingOutputPaths` list, or the narrowed subset when a caller supplied one (these may belong to a selected store, not the repo):
+   For each capability delta spec path selected in step 3 — the full
+   `existingOutputPaths` list, or the narrowed subset when a caller supplied one
+   (these may belong to a selected store, not the repo):
 
    a. **Read the delta spec** to understand the intended changes
 
-   b. **Read the main spec** at `<planningHome.root>/openspec/specs/<capability-path>/spec.md` (may not exist yet)
+   b. **Read the main spec** at
+   `<planningHome.root>/openspec/specs/<capability-path>/spec.md` (may not exist
+   yet)
 
    c. **Apply changes intelligently**:
 
-      **ADDED Requirements:**
+   **ADDED Requirements:**
       - If requirement doesn't exist in main spec → add it
-      - If requirement already exists → update it to match (treat as implicit MODIFIED)
+      - If requirement already exists → update it to match (treat as implicit
+        MODIFIED)
 
-      **MODIFIED Requirements:**
+   **MODIFIED Requirements:**
       - Find the requirement in main spec
       - Apply the changes - this can be:
         - Adding new scenarios the main spec does not have yet
@@ -110,10 +139,10 @@ This is an **agent-driven** operation - you will read delta specs and directly e
         - Changing the requirement description
       - Preserve scenarios/content not mentioned in the delta
 
-      **REMOVED Requirements:**
+   **REMOVED Requirements:**
       - Remove the entire requirement block from main spec
-      - Retiring the capability. Delete the whole `spec.md` - and the directory once
-        nothing else is left in it - only when ALL of these hold:
+      - Retiring the capability. Delete the whole `spec.md` - and the directory
+        once nothing else is left in it - only when ALL of these hold:
         1. removing the requirements *this run* left no requirement blocks;
         2. the rest of the spec is well-formed (it still has a `## Purpose`);
         3. the main spec was not already empty before this sync - if you removed
@@ -124,35 +153,38 @@ This is an **agent-driven** operation - you will read delta specs and directly e
         5. the change's `.openspec.yaml` declares `retire_capabilities: true`;
         6. the `spec.md` resolves inside the real specs root (do not follow a
            capability-directory symlink to delete an external file).
-        If removing the selected requirements would leave no requirement blocks and
-        any retirement condition is not satisfied, do not modify the main spec. Stop
-        the sync for that capability, report the blocking condition, and tell the user
-        how to resolve it. Never write or leave an empty `## Requirements` section.
-        When only the marker is missing, say that too - it is the one thing the user
-        can add to make the retirement go through.
-      - Deleting the file also deletes its `## Purpose`; any other section blocks
-        retirement. Name Purpose when you report the retirement. Include a pasteable
-        `git checkout` only when the spec lived in the caller's checkout;
-        otherwise give checkout-scoped recovery guidance.
+        If removing the selected requirements would leave no requirement blocks
+        and any retirement condition is not satisfied, do not modify the main
+        spec. Stop the sync for that capability, report the blocking condition,
+        and tell the user how to resolve it. Never write or leave an empty
+        `## Requirements` section. When only the marker is missing, say that
+        too - it is the one thing the user can add to make the retirement go
+        through.
+      - Deleting the file also deletes its `## Purpose`; any other section
+        blocks retirement. Name Purpose when you report the retirement. Include
+        a pasteable `git checkout` only when the spec lived in the caller's
+        checkout; otherwise give checkout-scoped recovery guidance.
 
-      **RENAMED Requirements:**
+   **RENAMED Requirements:**
       - Find the FROM requirement, rename to TO
 
-      **`## Purpose` in the delta:**
+   **`## Purpose` in the delta:**
       - The main spec already has one and it is authoritative - leave it alone
         (this is what `openspec archive` does; it warns and moves on)
 
    d. **Create new main spec** if capability doesn't exist yet:
       - Create `<planningHome.root>/openspec/specs/<capability-path>/spec.md`
-      - Add Purpose section: copy the delta's `## Purpose` body verbatim when it has one
-        (this is what `openspec archive` does); only write a brief TBD placeholder when it does not
+      - Add Purpose section: copy the delta's `## Purpose` body verbatim when it
+        has one (this is what `openspec archive` does); only write a brief TBD
+        placeholder when it does not
       - Add Requirements section with the ADDED requirements
       - Follow the **Main Spec Format Reference** below
 
 5. **Validate updated main specs**
 
-   Run `openspec validate --specs` with the same selected-root flags used earlier.
-   If validation fails, report the problems and do not claim the sync succeeded.
+   Run `openspec validate --specs` with the same selected-root flags used
+   earlier. If validation fails, report the problems and do not claim the sync
+   succeeded.
 
 6. **Show summary**
 
@@ -205,7 +237,9 @@ The system SHALL keep doing the existing thing, now also handling A.
 
 **Main Spec Format Reference**
 
-Main specs are what the delta merges INTO. They must never contain delta operation headers (`## ADDED/MODIFIED/REMOVED/RENAMED Requirements`) - after syncing, every requirement lives under a single `## Requirements` section:
+Main specs are what the delta merges INTO. They must never contain delta
+operation headers (`## ADDED/MODIFIED/REMOVED/RENAMED Requirements`) - after
+syncing, every requirement lives under a single `## Requirements` section:
 
 ```markdown
 # <capability> Specification
@@ -226,7 +260,10 @@ The system SHALL do something new.
 **Key Principle: Intelligent Merging**
 
 Unlike programmatic merging, you merge rather than overwrite:
-- A MODIFIED block carries the whole requirement - body plus every scenario that survives the change. `openspec validate` and `openspec archive` both reject one that drops a scenario the main spec still has.
+
+- A MODIFIED block carries the whole requirement - body plus every scenario that
+  survives the change. `openspec validate` and `openspec archive` both reject
+  one that drops a scenario the main spec still has.
 - Keep anything the delta does not mention, in the main spec's existing order
 - Use your judgment to merge changes sensibly
 
@@ -249,14 +286,22 @@ Main specs are now updated. The change remains active - archive when implementat
 ```
 
 **Guardrails**
+
 - Read both delta and main specs before making changes
 - Preserve existing content not mentioned in delta
-- Never copy a delta file into a main spec as-is - merge its content so the main spec keeps the Main Spec Format Reference structure, with no delta operation headers
+- Never copy a delta file into a main spec as-is - merge its content so the main
+  spec keeps the Main Spec Format Reference structure, with no delta operation
+  headers
 - If something is unclear, ask for clarification
 - Show what you're changing as you go
 - The operation should be idempotent - running twice should give same result
-- Use only `artifactPaths.specs.existingOutputPaths`; never infer delta specs from unrelated artifacts
-- Honor a caller-supplied subset of `existingOutputPaths`; never widen it back to the full list
-- Fetch specs instructions once for direct sync, or reuse the archive-supplied snapshot inline
-- Stop before every main-spec write on a non-zero or invalid JSON specs-instruction response
-- Artifact rules constrain only the specs being written and are never copied into output files
+- Use only `artifactPaths.specs.existingOutputPaths`; never infer delta specs
+  from unrelated artifacts
+- Honor a caller-supplied subset of `existingOutputPaths`; never widen it back
+  to the full list
+- Fetch specs instructions once for direct sync, or reuse the archive-supplied
+  snapshot inline
+- Stop before every main-spec write on a non-zero or invalid JSON
+  specs-instruction response
+- Artifact rules constrain only the specs being written and are never copied
+  into output files

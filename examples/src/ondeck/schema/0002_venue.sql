@@ -15,4 +15,3 @@ CREATE TABLE venues (
 );
 COMMENT ON TABLE venues IS 'Venues are places where muisc happens';
 COMMENT ON COLUMN venues.slug IS 'This value appears in public URLs';
-

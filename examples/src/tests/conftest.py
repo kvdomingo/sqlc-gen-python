@@ -1,4 +1,3 @@
-import asyncio
 import os
 import random
 
@@ -15,7 +14,7 @@ def postgres_uri() -> str:
     pg_password = os.environ.get("PG_PASSWORD", "mysecretpassword")
     pg_db = os.environ.get("PG_DATABASE", "dinotest")
 
-    return f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+    return f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
 
 
 @pytest.fixture(scope="session")
@@ -40,7 +39,7 @@ def db(sqlalchemy_connection: sqlalchemy.engine.Connection) -> sqlalchemy.engine
 
 @pytest.fixture(scope="session")
 async def async_sqlalchemy_connection(postgres_uri) -> sqlalchemy.ext.asyncio.AsyncConnection:
-    postgres_uri = postgres_uri.replace("postgresql", "postgresql+asyncpg")
+    postgres_uri = postgres_uri.replace("postgresql+psycopg", "postgresql+asyncpg")
     engine = sqlalchemy.ext.asyncio.create_async_engine(postgres_uri)
     async with engine.connect() as conn:
         yield conn
@@ -57,11 +56,3 @@ async def async_db(async_sqlalchemy_connection: sqlalchemy.ext.asyncio.AsyncConn
     await conn.rollback()
     await conn.execute(sqlalchemy.text(f"DROP SCHEMA {schema_name} CASCADE"))
     await conn.execute(sqlalchemy.text("SET search_path TO public"))
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Change event_loop fixture to session level."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()

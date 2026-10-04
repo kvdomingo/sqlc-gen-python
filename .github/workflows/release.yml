@@ -1,0 +1,98 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump (auto = detect from PR title)"
+        required: false
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Compute version
+        id: version
+        run: |
+          bump=${INPUTS_BUMP:-auto}
+          if [[ "${bump}" == auto ]]; then
+            title=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].title // ""')
+            body=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].body // ""')
+            echo "PR title: ${title:-<none>}"
+            if grep -qE '^[a-z]+(\(.+\))?!:' <<< "${title}" || grep -qE '^BREAKING[ -]CHANGE:' <<< "${body}"; then
+              bump=major
+            elif grep -qE '^feat(\(.+\))?:' <<< "${title}"; then
+              bump=minor
+            elif grep -qE '^(fix|hotfix)(\(.+\))?:' <<< "${title}"; then
+              bump=patch
+            else
+              echo "No releasable PR title; skipping release"
+              exit 0
+            fi
+          fi
+          latest=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          if [[ -z "${latest}" ]]; then
+            echo "version=v1.0.0" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          IFS=. read -r major minor patch <<< "${latest}"
+          major=${major#v}
+          case "${bump}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          echo "version=v${major}.${minor}.${patch}" >> "${GITHUB_OUTPUT}"
+        env:
+          INPUTS_BUMP: ${{ inputs.bump }}
+          GH_TOKEN: ${{ github.token }}
+
+      - uses: actions/setup-go@v5
+        if: steps.version.outputs.version
+        with:
+          go-version-file: go.mod
+
+      - name: Build WASM binary
+        if: steps.version.outputs.version
+        run: |
+          mkdir -p bin
+          cd plugin && GOOS=wasip1 GOARCH=wasm go build -o ../bin/alt-sqlc-gen-python.wasm main.go
+
+      - name: Generate checksum
+        if: steps.version.outputs.version
+        run: sha256sum bin/alt-sqlc-gen-python.wasm > bin/alt-sqlc-gen-python.wasm.sha256
+
+      - name: Create GitHub release
+        if: steps.version.outputs.version
+        run: |
+          gh release create "${VERSION}" \
+            --target "${GITHUB_SHA}" \
+            --title "${VERSION}" \
+            --generate-notes \
+            bin/alt-sqlc-gen-python.wasm \
+            bin/alt-sqlc-gen-python.wasm.sha256
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}

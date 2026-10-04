@@ -88,3 +88,83 @@ func Yield(value *ast.Node) *ast.Node {
 		},
 	}
 }
+
+func BitOr(left, right *ast.Node) *ast.Node {
+	return &ast.Node{
+		Node: &ast.Node_BinOp{
+			BinOp: &ast.BinOp{
+				Left:  left,
+				Op:    &ast.Node{Node: &ast.Node_BitOr{BitOr: &ast.BitOr{}}},
+				Right: right,
+			},
+		},
+	}
+}
+
+func Ellipsis() *ast.Node {
+	return &ast.Node{
+		Node: &ast.Node_Constant{
+			Constant: &ast.Constant{
+				Value: &ast.Constant_Ellipsis{Ellipsis: true},
+			},
+		},
+	}
+}
+
+func ListComp(elt, target, iter *ast.Node) *ast.Node {
+	return &ast.Node{
+		Node: &ast.Node_ListComp{
+			ListComp: &ast.ListComp{
+				Elt: elt,
+				Generators: []*ast.Comprehension{
+					{Target: target, Iter: iter},
+				},
+			},
+		},
+	}
+}
+
+func Subscript(value string, slice ...*ast.Node) *ast.Node {
+	s := slice[0]
+	if len(slice) > 1 {
+		s = Tuple(slice...)
+	}
+	return &ast.Node{
+		Node: &ast.Node_Subscript{
+			Subscript: &ast.Subscript{
+				Value: &ast.Name{Id: value},
+				Slice: s,
+			},
+		},
+	}
+}
+
+func Tuple(elts ...*ast.Node) *ast.Node {
+	return &ast.Node{
+		Node: &ast.Node_Tuple{
+			Tuple: &ast.Tuple{Elts: elts},
+		},
+	}
+}
+
+func With(contextExpr *ast.Node, body ...*ast.Node) *ast.Node {
+	return &ast.Node{
+		Node: &ast.Node_With{
+			With: &ast.With{
+				Items: []*ast.WithItem{{ContextExpr: contextExpr}},
+				Body:  body,
+			},
+		},
+	}
+}
+
+func Not(operand *ast.Node) *ast.Node {
+	return &ast.Node{
+		Node: &ast.Node_UnaryOp{
+			UnaryOp: &ast.UnaryOp{
+				Op:      &ast.Node{Node: &ast.Node_Not{Not: &ast.Not{}}},
+				Operand: operand,
+			},
+		},
+	}
+}

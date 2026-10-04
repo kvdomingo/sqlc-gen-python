@@ -5,3 +5,5 @@ bin
 .direnv
 .devenv*
 devenv.local.nix
+__pycache__/
+.mypy_cache/

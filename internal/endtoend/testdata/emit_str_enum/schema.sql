@@ -6,3 +6,10 @@ CREATE TABLE books (
           title  text      NOT NULL,
           status book_status DEFAULT 'available'
 );
+
+CREATE TYPE op AS ENUM ('=', '<>', 'in-progress', 'in_progress', '1st', 'say "hi"', 'back\slash');
+
+CREATE TABLE rules (
+  id BIGSERIAL PRIMARY KEY,
+  op op NOT NULL
+);

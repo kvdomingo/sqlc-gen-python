@@ -1,2 +1,5 @@
 [tools]
-go = "1.19"
+go = "1.27"
+prek = "latest"
+rumdl = "latest"
+zizmor = "latest"

@@ -1,0 +1,2 @@
+# package py
+error generating code: error generating output: query file errors.sql would overwrite errors.py, which emit_query_errors generates

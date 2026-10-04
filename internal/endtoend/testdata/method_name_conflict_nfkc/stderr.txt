@@ -1,0 +1,2 @@
+# package py
+error generating code: error generating output: queries GetIs and GetIſ both generate method get_iſ
