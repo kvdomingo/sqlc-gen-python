@@ -1,4 +1,4 @@
-# alt-sqlc-gen-python
+# sqlc-gen-python
 
 A [sqlc](https://sqlc.dev) plugin that generates typed Python (SQLAlchemy +
 dataclasses or pydantic) from PostgreSQL queries.
@@ -6,7 +6,10 @@ dataclasses or pydantic) from PostgreSQL queries.
 ## Fork notes
 
 This is a fork of [sqlc-gen-python][upstream], brought up to parity with sqlc
-v1.31.1. Compared to upstream it adds:
+v1.31.1. I started this fork because the official sqlc-gen-python and its forks
+are no longer receiving active contributions at the time of writing.
+
+Compared to upstream it adds:
 
 - `sqlc.embed()`, query comments as docstrings, multi-dimensional arrays
 - `:copyfrom`, `:batchexec`, `:batchone` and `:batchmany`
