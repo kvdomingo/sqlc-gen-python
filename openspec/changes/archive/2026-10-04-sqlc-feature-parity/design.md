@@ -345,11 +345,12 @@ and parameter arguments, so method bodies do not change. One typing consequence:
 subscripted SQLAlchemy type is evaluated at runtime.
 
 With `emit_generic_querier`, the same union becomes the bound of a PEP 695 type
-parameter: `class Querier[_ConnT: <union>]`, with `_conn: _ConnT` and `conn: _ConnT`. The union
-is spelled by `Annotation(syntax)` (decision 15). The class body is otherwise
-identical, so the method builder (task 6.1) takes no notice of the flag, and
-only `querierClassDef`/`asyncQuerierClassDef` branch on it. It is opt-in, not
-the default, because PEP 695 syntax is a `SyntaxError` before Python 3.12.
+parameter: `class Querier[_ConnT: <union>]`, with `_conn: _ConnT` and
+`conn: _ConnT`. The union is spelled by `Annotation(syntax)` (decision 15). The
+class body is otherwise identical, so the method builder (task 6.1) takes no
+notice of the flag, and only `querierClassDef`/`asyncQuerierClassDef` branch on
+it. It is opt-in, not the default, because PEP 695 syntax is a `SyntaxError`
+before Python 3.12.
 
 Alternative considered: a pre-3.12 `T = TypeVar("T", bound=...)` plus
 `Generic[T]`. Rejected, because it would add a module-level TypeVar per file and

@@ -16,7 +16,9 @@ The plugin SHALL accept an `overrides` list. An entry with `db_type` and
 `py_type` SHALL replace the Python type of every column and parameter whose
 database type matches `db_type`. This SHALL apply in models, params classes, row
 classes, and method signatures. Matching SHALL follow sqlc's rules: a `db_type`
-given without a schema also matches the `pg_catalog`-qualified name. By default
+given without a schema also matches the `pg_catalog`-qualified name, and SQL
+spellings of built-in types (for example `bigint` or `timestamp with time zone`)
+match the names sqlc reports (`int8`, `timestamptz`). By default
 an entry SHALL apply only to non-null columns. With `nullable: true` it SHALL
 apply only to nullable columns. A nullable column that an entry matches SHALL
 keep its `Optional[...]` wrapper, and an array column SHALL keep its `List[...]`
@@ -38,6 +40,12 @@ wrapper around the override type.
 - **WHEN** an entry sets `db_type: jsonb`, `py_type: my_lib.types.Payload`,
   `nullable: true` and a column is `extra jsonb`
 - **THEN** the column is declared `extra: Optional[my_lib.types.Payload]`
+
+#### Scenario: SQL spelling of a type
+
+- **WHEN** an entry sets `db_type: bigint` and a column is
+  `rank bigint NOT NULL`
+- **THEN** the column is annotated with the entry's `py_type`
 
 ### Requirement: Type overrides by column
 
@@ -63,11 +71,12 @@ type as the column.
 
 ### Requirement: Override imports
 
-When `py_type` is a dotted path, the plugin SHALL add `import <module>` to every
-generated file that uses the type, where `<module>` is the path without its last
-segment. The annotation SHALL be the full dotted path. When `py_type` has no dot
-(for example `str` or `bytes`) and no `py_import` is given, the plugin SHALL NOT
-add an import.
+For every dotted name in `py_type`, the plugin SHALL add `import <module>` to
+every generated file that uses the type, where `<module>` is the name without
+its last segment. This SHALL also apply to dotted names inside a generic type
+such as `dict[str, decimal.Decimal]`. The annotation SHALL be `py_type`
+unchanged. Names without a dot (for example `str`, `bytes` or `dict`) SHALL NOT
+be imported.
 
 An entry MAY also set `py_import`, as alt-sqlc-gen-python and upstream PR #83
 do. Then the plugin SHALL add `from <py_import> import <py_type>` to every file
@@ -90,6 +99,12 @@ that uses the type, and the annotation SHALL be the bare `py_type`. When
 
 - **WHEN** `{db_type: bytea, py_type: bytes}` is set
 - **THEN** `bytea` columns are annotated `bytes` and no import is added for them
+
+#### Scenario: Generic py_type
+
+- **WHEN**
+  `{db_type: "double precision", py_type: "my_lib.Box[decimal.Decimal]"}` is set
+- **THEN** files that use the type contain `import my_lib` and `import decimal`
 
 ### Requirement: Global overrides
 

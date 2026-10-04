@@ -128,11 +128,11 @@
       own commit that regenerates all fixtures and `examples/`, and verify
       `make test` and `cd examples && sqlc diff` pass
 - [x] 6.3 Add `emit_generic_querier`: emit `class Querier[_ConnT: <union>]` and
-      `class AsyncQuerier[_ConnT: <union>]` with `_conn: _ConnT` and `conn: _ConnT`, with the
-      bound in the active syntax. Verify with a new fixture
-      `testdata/emit_generic_querier` (in typing and modern syntax) plus a
-      `_check.py` where `reveal_type(Querier(session)._conn)` is `Session` and a
-      protocol assignment passes under `mypy --strict`
+      `class AsyncQuerier[_ConnT: <union>]` with `_conn: _ConnT` and
+      `conn: _ConnT`, with the bound in the active syntax. Verify with a new
+      fixture `testdata/emit_generic_querier` (in typing and modern syntax) plus
+      a `_check.py` where `reveal_type(Querier(session)._conn)` is `Session` and
+      a protocol assignment passes under `mypy --strict`
 - [x] 6.4 Emit `Query.Comments` as the docstring of sync and async querier
       methods. Verify with a new fixture `testdata/query_comments`, and check
       that uncommented queries have no docstring

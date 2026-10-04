@@ -1,4 +1,4 @@
-# Spec Delta
+# generated-code-validity Specification
 
 ## Purpose
 
@@ -6,7 +6,7 @@ Guarantees that every generated module is syntactically valid Python that
 imports cleanly, whatever the identifiers, comments, and enum values in the
 schema are.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Python keywords are escaped
 
@@ -14,6 +14,12 @@ Any generated field, parameter, or method name that is a Python keyword SHALL
 get a trailing underscore (for example `from` becomes `from_`, and `class`
 becomes `class_`). A trailing underscore SHALL also apply when the name was set
 through `rename`. SQL text and parameter placeholders SHALL be unchanged.
+
+A keyword-only method parameter whose name the method body also reads at module
+level (`errors`, `models`, `sqlalchemy`, `cast`, a typing name, or an imported
+module) SHALL get a trailing underscore too. When two parameters of one method
+have the same name, the second SHALL get the suffix `_2`, the third `_3`, and so
+on.
 
 #### Scenario: Keyword column
 
@@ -26,6 +32,17 @@ through `rename`. SQL text and parameter placeholders SHALL be unchanged.
 - **WHEN** a query parameter is named `class`
 - **THEN** the method has the keyword-only parameter `class_`, and the parameter
   dict maps the placeholder to `class_`
+
+#### Scenario: Parameter that would shadow a module
+
+- **WHEN** `emit_query_errors` is set and a query parameter is named `errors`
+- **THEN** the method has the parameter `errors_`, and the body still calls
+  `errors._wrap_errors`
+
+#### Scenario: Repeated parameter name
+
+- **WHEN** a query has `WHERE id > $1 AND id < $2`
+- **THEN** the method has the keyword-only parameters `id` and `id_2`
 
 ### Requirement: Empty class bodies
 

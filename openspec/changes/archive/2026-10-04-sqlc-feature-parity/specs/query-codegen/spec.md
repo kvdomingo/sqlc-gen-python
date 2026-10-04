@@ -130,11 +130,11 @@ connection-or-session union:
 - `class Querier[_ConnT: <sync union>]`
 - `class AsyncQuerier[_ConnT: <async union>]`
 
-`_conn` SHALL be annotated `_ConnT`, and `__init__` SHALL take `conn: _ConnT`. The bound
-SHALL be spelled in the active type syntax (`Union[...]` or `|`). Method
-signatures and bodies SHALL be the same as for non-generic queriers. Querier
-protocols SHALL stay non-generic, and a generic querier of any valid `_ConnT` SHALL
-still satisfy its protocol.
+`_conn` SHALL be annotated `_ConnT`, and `__init__` SHALL take `conn: _ConnT`.
+The bound SHALL be spelled in the active type syntax (`Union[...]` or `|`).
+Method signatures and bodies SHALL be the same as for non-generic queriers.
+Querier protocols SHALL stay non-generic, and a generic querier of any valid
+`_ConnT` SHALL still satisfy its protocol.
 
 #### Scenario: Session type is preserved
 
@@ -146,7 +146,8 @@ still satisfy its protocol.
 #### Scenario: Bound is enforced
 
 - **WHEN** code calls `Querier(object())` with the option on
-- **THEN** a type checker reports that the argument violates the bound of `_ConnT`
+- **THEN** a type checker reports that the argument violates the bound of
+  `_ConnT`
 
 #### Scenario: Works with both syntax styles
 
