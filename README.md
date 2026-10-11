@@ -400,6 +400,10 @@ options:
       py_import: uuid                   # from uuid import UUID
     - db_type: bytea
       py_type: bytes                    # builtin, no import
+    - db_type: domain_entity
+      py_type: DomainEntity
+      py_import: app.my_module.models.domain
+      many: true                        # list[DomainEntity]
 ```
 
 - A `db_type` entry applies to non-null columns, or only to nullable ones with
@@ -412,6 +416,10 @@ options:
 - A generic `py_type` such as `dict[str, decimal.Decimal]` imports the module
   of every dotted name in it. Bare names other than builtins are not imported,
   so write `typing.Any`, not `Any`.
+- With `py_import`, `py_type` must be a single identifier. For a list of it,
+  set `many: true` rather than writing `list[DomainEntity]`. The list is
+  spelled `List[...]` unless `emit_modern_types` is on, sits inside any array
+  lists, and is wrapped in `Optional[...]` for nullable columns.
 
 Overrides and `rename` can also be set once for every codegen block in sqlc's
 top-level `options`. Codegen `overrides` are checked before global ones, but a

@@ -180,6 +180,9 @@ func makePyType(req *plugin.GenerateRequest, conf Config, col *plugin.Column) py
 	if o := conf.findOverride(col, req.Catalog.DefaultSchema); o != nil {
 		typ.InnerType = o.PyType
 		typ.Import = o.PyImport
+		if o.Many {
+			typ.ArrayDims++
+		}
 		return typ
 	}
 	typ.InnerType = pyInnerType(req, conf, col)
