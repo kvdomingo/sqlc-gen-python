@@ -39,6 +39,7 @@ type Override struct {
 	Nullable bool   `json:"nullable,omitempty"`
 	PyType   string `json:"py_type,omitempty"`
 	PyImport string `json:"py_import,omitempty"`
+	Many     bool   `json:"many,omitempty"`
 
 	// schema, table and column glob patterns, set when Column is used
 	columnPatterns []string
@@ -103,8 +104,8 @@ func (o *Override) parse(defaultSchema string) error {
 		return errors.New("set one of column or db_type")
 	case strings.TrimSpace(o.PyType) == "":
 		return errors.New("py_type must not be empty")
-	case o.PyImport != "" && strings.Contains(o.PyType, "."):
-		return errors.New("py_type must be a bare name when py_import is set")
+	case o.PyImport != "" && !identifierPattern.MatchString(o.PyType):
+		return errors.New("py_type must be a single identifier when py_import is set; use many: true for a list")
 	}
 	if o.Column == "" {
 		if canonical, ok := pgTypeAliases[o.DBType]; ok {
@@ -171,6 +172,8 @@ func (c Config) moduleNames() map[string]struct{} {
 // rootNamePattern matches each name in a type expression that is not an
 // attribute, such as dict, str and uuid in "dict[str, uuid.UUID]".
 var rootNamePattern = regexp.MustCompile(`(?:^|[^.\w])([A-Za-z_]\w*)`)
+
+var identifierPattern = regexp.MustCompile(`^[A-Za-z_]\w*$`)
 
 func globMatch(pattern, name string) bool {
 	ok, _ := path.Match(pattern, name)

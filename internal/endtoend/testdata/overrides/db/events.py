@@ -10,17 +10,18 @@ import my_lib
 import my_lib.types
 import sqlalchemy
 import sqlalchemy.orm
+from my_lib.tags import Tag
 
 from db import models
 
 
 CREATE_EVENT = """-- name: create_event \\:one
-INSERT INTO events (payload, extra) VALUES (:p1, :p2) RETURNING id, payload, extra, history, score, rank
+INSERT INTO events (payload, extra) VALUES (:p1, :p2) RETURNING id, payload, extra, history, score, rank, tags, labels
 """
 
 
 LIST_EVENTS_BY_RANK = """-- name: list_events_by_rank \\:many
-SELECT id, payload, extra, history, score, rank FROM events WHERE rank > :p1 AND rank < :p2
+SELECT id, payload, extra, history, score, rank, tags, labels FROM events WHERE rank > :p1 AND rank < :p2
 """
 
 
@@ -41,6 +42,8 @@ class Querier:
             history=cast(Optional[List[my_lib.types.Payload]], row[3]),
             score=cast(my_lib.Box[decimal.Decimal], row[4]),
             rank=cast(dict[str, uuid.UUID], row[5]),
+            tags=cast(List[Tag], row[6]),
+            labels=cast(Optional[List[List[Tag]]], row[7]),
         )
 
     def list_events_by_rank(self, *, rank: dict[str, uuid.UUID], rank_2: dict[str, uuid.UUID]) -> Iterator[models.Event]:
@@ -53,4 +56,6 @@ class Querier:
                 history=cast(Optional[List[my_lib.types.Payload]], row[3]),
                 score=cast(my_lib.Box[decimal.Decimal], row[4]),
                 rank=cast(dict[str, uuid.UUID], row[5]),
+                tags=cast(List[Tag], row[6]),
+                labels=cast(Optional[List[List[Tag]]], row[7]),
             )
