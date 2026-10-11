@@ -10,6 +10,7 @@ from uuid import UUID
 import my_ids
 import my_lib
 import my_lib.types
+from my_lib.tags import Tag
 
 
 @dataclasses.dataclass()
@@ -27,6 +28,8 @@ class Event:
     history: Optional[List[my_lib.types.Payload]]
     score: my_lib.Box[decimal.Decimal]
     rank: dict[str, uuid.UUID]
+    tags: List[Tag]
+    labels: Optional[List[List[Tag]]]
 
 
 @dataclasses.dataclass()

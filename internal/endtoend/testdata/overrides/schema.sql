@@ -16,5 +16,7 @@ CREATE TABLE events (
   extra   jsonb,
   history jsonb[],
   score   double precision NOT NULL,
-  rank    bigint NOT NULL
+  rank    bigint NOT NULL,
+  tags    text NOT NULL,
+  labels  text[]
 );
