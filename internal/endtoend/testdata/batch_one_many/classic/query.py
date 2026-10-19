@@ -65,16 +65,16 @@ class Querier:
     def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
-    def get_author_names(self, arg: Sequence[GetAuthorNamesParams]) -> Iterator[Optional[str]]:
-        for a in arg:
+    def get_author_names(self, *, args: Sequence[GetAuthorNamesParams]) -> Iterator[Optional[str]]:
+        for a in args:
             row = self._conn.execute(sqlalchemy.text(GET_AUTHOR_NAMES), {"p1": a.id}).first()
             if row is None:
                 yield None
             else:
                 yield cast(str, row[0])
 
-    def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
-        for a in arg:
+    def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
+        for a in args:
             row = self._conn.execute(sqlalchemy.text(GET_AUTHORS_BY_ID), {"p1": a.id}).first()
             if row is None:
                 yield None
@@ -85,15 +85,15 @@ class Querier:
                     bio=cast(Optional[str], row[2]),
                 )
 
-    def list_book_titles(self, arg: Sequence[ListBookTitlesParams]) -> Iterator[List[ListBookTitlesRow]]:
-        for a in arg:
+    def list_book_titles(self, *, args: Sequence[ListBookTitlesParams]) -> Iterator[List[ListBookTitlesRow]]:
+        for a in args:
             yield [ListBookTitlesRow(
                 id=cast(int, row[0]),
                 title=cast(str, row[1]),
             ) for row in self._conn.execute(sqlalchemy.text(LIST_BOOK_TITLES), {"p1": a.author_id, "p2": a.title})]
 
-    def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> Iterator[List[models.Book]]:
-        for a in arg:
+    def list_books_by_author(self, *, args: Sequence[ListBooksByAuthorParams]) -> Iterator[List[models.Book]]:
+        for a in args:
             yield [models.Book(
                 id=cast(int, row[0]),
                 author_id=cast(int, row[1]),
@@ -107,16 +107,16 @@ class AsyncQuerier:
     def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
-    async def get_author_names(self, arg: Sequence[GetAuthorNamesParams]) -> AsyncIterator[Optional[str]]:
-        for a in arg:
+    async def get_author_names(self, *, args: Sequence[GetAuthorNamesParams]) -> AsyncIterator[Optional[str]]:
+        for a in args:
             row = (await self._conn.execute(sqlalchemy.text(GET_AUTHOR_NAMES), {"p1": a.id})).first()
             if row is None:
                 yield None
             else:
                 yield cast(str, row[0])
 
-    async def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]:
-        for a in arg:
+    async def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]:
+        for a in args:
             row = (await self._conn.execute(sqlalchemy.text(GET_AUTHORS_BY_ID), {"p1": a.id})).first()
             if row is None:
                 yield None
@@ -127,15 +127,15 @@ class AsyncQuerier:
                     bio=cast(Optional[str], row[2]),
                 )
 
-    async def list_book_titles(self, arg: Sequence[ListBookTitlesParams]) -> AsyncIterator[List[ListBookTitlesRow]]:
-        for a in arg:
+    async def list_book_titles(self, *, args: Sequence[ListBookTitlesParams]) -> AsyncIterator[List[ListBookTitlesRow]]:
+        for a in args:
             yield [ListBookTitlesRow(
                 id=cast(int, row[0]),
                 title=cast(str, row[1]),
             ) for row in await self._conn.execute(sqlalchemy.text(LIST_BOOK_TITLES), {"p1": a.author_id, "p2": a.title})]
 
-    async def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> AsyncIterator[List[models.Book]]:
-        for a in arg:
+    async def list_books_by_author(self, *, args: Sequence[ListBooksByAuthorParams]) -> AsyncIterator[List[models.Book]]:
+        for a in args:
             yield [models.Book(
                 id=cast(int, row[0]),
                 author_id=cast(int, row[1]),

@@ -109,21 +109,21 @@ class QuerierProtocol(Protocol):
 
     def create_author_at(self, *, name: str, created_at: datetime.datetime) -> Optional[models.Author]: ...
 
-    def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> int: ...
+    def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> int: ...
 
     def create_book(self, *, author_id: int, title: str) -> Optional[models.Book]: ...
 
-    def create_books(self, arg: Sequence[CreateBooksParams]) -> None: ...
+    def create_books(self, *, args: Sequence[CreateBooksParams]) -> None: ...
 
-    def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]: ...
+    def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]: ...
 
     def get_book_with_author(self, *, id: int) -> Optional[GetBookWithAuthorRow]: ...
 
-    def insert_authors_returning(self, arg: Sequence[InsertAuthorsReturningParams]) -> Iterator[Optional[models.Author]]: ...
+    def insert_authors_returning(self, *, args: Sequence[InsertAuthorsReturningParams]) -> Iterator[Optional[models.Author]]: ...
 
     def list_authors(self) -> Iterator[models.Author]: ...
 
-    def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> Iterator[List[models.Book]]: ...
+    def list_books_by_author(self, *, args: Sequence[ListBooksByAuthorParams]) -> Iterator[List[models.Book]]: ...
 
     def set_book_title(self, *, id: int, title: str) -> None: ...
 
@@ -133,21 +133,21 @@ class AsyncQuerierProtocol(Protocol):
 
     async def create_author_at(self, *, name: str, created_at: datetime.datetime) -> Optional[models.Author]: ...
 
-    async def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> int: ...
+    async def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> int: ...
 
     async def create_book(self, *, author_id: int, title: str) -> Optional[models.Book]: ...
 
-    async def create_books(self, arg: Sequence[CreateBooksParams]) -> None: ...
+    async def create_books(self, *, args: Sequence[CreateBooksParams]) -> None: ...
 
-    def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]: ...
+    def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]: ...
 
     async def get_book_with_author(self, *, id: int) -> Optional[GetBookWithAuthorRow]: ...
 
-    def insert_authors_returning(self, arg: Sequence[InsertAuthorsReturningParams]) -> AsyncIterator[Optional[models.Author]]: ...
+    def insert_authors_returning(self, *, args: Sequence[InsertAuthorsReturningParams]) -> AsyncIterator[Optional[models.Author]]: ...
 
     def list_authors(self) -> AsyncIterator[models.Author]: ...
 
-    def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> AsyncIterator[List[models.Book]]: ...
+    def list_books_by_author(self, *, args: Sequence[ListBooksByAuthorParams]) -> AsyncIterator[List[models.Book]]: ...
 
     async def set_book_title(self, *, id: int, title: str) -> None: ...
 
@@ -183,11 +183,11 @@ class Querier:
                 created_at=cast(datetime.datetime, row[3]),
             )
 
-    def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> int:
+    def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> int:
         with errors._wrap_errors("create_authors"):
-            if not arg:
+            if not args:
                 return 0
-            result = self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in arg])
+            result = self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in args])
             return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
 
     def create_book(self, *, author_id: int, title: str) -> Optional[models.Book]:
@@ -202,15 +202,15 @@ class Querier:
                 status=cast(models.BookStatus, row[3]),
             )
 
-    def create_books(self, arg: Sequence[CreateBooksParams]) -> None:
+    def create_books(self, *, args: Sequence[CreateBooksParams]) -> None:
         with errors._wrap_errors("create_books"):
-            if not arg:
+            if not args:
                 return None
-            self._conn.execute(sqlalchemy.text(CREATE_BOOKS), [{"p1": a.author_id, "p2": a.title, "p3": a.status} for a in arg])
+            self._conn.execute(sqlalchemy.text(CREATE_BOOKS), [{"p1": a.author_id, "p2": a.title, "p3": a.status} for a in args])
 
-    def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
+    def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
         with errors._wrap_errors("get_authors_by_id"):
-            for a in arg:
+            for a in args:
                 row = self._conn.execute(sqlalchemy.text(GET_AUTHORS_BY_ID), {"p1": a.id}).first()
                 if row is None:
                     yield None
@@ -242,9 +242,9 @@ class Querier:
                 ),
             )
 
-    def insert_authors_returning(self, arg: Sequence[InsertAuthorsReturningParams]) -> Iterator[Optional[models.Author]]:
+    def insert_authors_returning(self, *, args: Sequence[InsertAuthorsReturningParams]) -> Iterator[Optional[models.Author]]:
         with errors._wrap_errors("insert_authors_returning"):
-            for a in arg:
+            for a in args:
                 row = self._conn.execute(sqlalchemy.text(INSERT_AUTHORS_RETURNING), {"p1": a.name}).first()
                 if row is None:
                     yield None
@@ -267,9 +267,9 @@ class Querier:
                     created_at=cast(datetime.datetime, row[3]),
                 )
 
-    def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> Iterator[List[models.Book]]:
+    def list_books_by_author(self, *, args: Sequence[ListBooksByAuthorParams]) -> Iterator[List[models.Book]]:
         with errors._wrap_errors("list_books_by_author"):
-            for a in arg:
+            for a in args:
                 yield [models.Book(
                     id=cast(int, row[0]),
                     author_id=cast(int, row[1]),
@@ -313,11 +313,11 @@ class AsyncQuerier:
                 created_at=cast(datetime.datetime, row[3]),
             )
 
-    async def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> int:
+    async def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> int:
         with errors._wrap_errors("create_authors"):
-            if not arg:
+            if not args:
                 return 0
-            result = await self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in arg])
+            result = await self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in args])
             return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
 
     async def create_book(self, *, author_id: int, title: str) -> Optional[models.Book]:
@@ -332,15 +332,15 @@ class AsyncQuerier:
                 status=cast(models.BookStatus, row[3]),
             )
 
-    async def create_books(self, arg: Sequence[CreateBooksParams]) -> None:
+    async def create_books(self, *, args: Sequence[CreateBooksParams]) -> None:
         with errors._wrap_errors("create_books"):
-            if not arg:
+            if not args:
                 return None
-            await self._conn.execute(sqlalchemy.text(CREATE_BOOKS), [{"p1": a.author_id, "p2": a.title, "p3": a.status} for a in arg])
+            await self._conn.execute(sqlalchemy.text(CREATE_BOOKS), [{"p1": a.author_id, "p2": a.title, "p3": a.status} for a in args])
 
-    async def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]:
+    async def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]:
         with errors._wrap_errors("get_authors_by_id"):
-            for a in arg:
+            for a in args:
                 row = (await self._conn.execute(sqlalchemy.text(GET_AUTHORS_BY_ID), {"p1": a.id})).first()
                 if row is None:
                     yield None
@@ -372,9 +372,9 @@ class AsyncQuerier:
                 ),
             )
 
-    async def insert_authors_returning(self, arg: Sequence[InsertAuthorsReturningParams]) -> AsyncIterator[Optional[models.Author]]:
+    async def insert_authors_returning(self, *, args: Sequence[InsertAuthorsReturningParams]) -> AsyncIterator[Optional[models.Author]]:
         with errors._wrap_errors("insert_authors_returning"):
-            for a in arg:
+            for a in args:
                 row = (await self._conn.execute(sqlalchemy.text(INSERT_AUTHORS_RETURNING), {"p1": a.name})).first()
                 if row is None:
                     yield None
@@ -397,9 +397,9 @@ class AsyncQuerier:
                     created_at=cast(datetime.datetime, row[3]),
                 )
 
-    async def list_books_by_author(self, arg: Sequence[ListBooksByAuthorParams]) -> AsyncIterator[List[models.Book]]:
+    async def list_books_by_author(self, *, args: Sequence[ListBooksByAuthorParams]) -> AsyncIterator[List[models.Book]]:
         with errors._wrap_errors("list_books_by_author"):
-            for a in arg:
+            for a in args:
                 yield [models.Book(
                     id=cast(int, row[0]),
                     author_id=cast(int, row[1]),

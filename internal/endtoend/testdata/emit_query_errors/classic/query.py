@@ -102,9 +102,9 @@ class Querier:
         with errors._wrap_errors("delete_author"):
             self._conn.execute(sqlalchemy.text(DELETE_AUTHOR), {"p1": id})
 
-    def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
+    def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
         with errors._wrap_errors("get_authors_by_id"):
-            for a in arg:
+            for a in args:
                 row = self._conn.execute(sqlalchemy.text(GET_AUTHORS_BY_ID), {"p1": a.id}).first()
                 if row is None:
                     yield None
@@ -205,9 +205,9 @@ class AsyncQuerier:
         with errors._wrap_errors("delete_author"):
             await self._conn.execute(sqlalchemy.text(DELETE_AUTHOR), {"p1": id})
 
-    async def get_authors_by_id(self, arg: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]:
+    async def get_authors_by_id(self, *, args: Sequence[GetAuthorsByIDParams]) -> AsyncIterator[Optional[models.Author]]:
         with errors._wrap_errors("get_authors_by_id"):
-            for a in arg:
+            for a in args:
                 row = (await self._conn.execute(sqlalchemy.text(GET_AUTHORS_BY_ID), {"p1": a.id})).first()
                 if row is None:
                     yield None

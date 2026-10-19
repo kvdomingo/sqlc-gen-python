@@ -39,15 +39,15 @@ class Querier:
     def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
-    def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> None:
-        if not arg:
+    def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> None:
+        if not args:
             return None
-        self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in arg])
+        self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in args])
 
-    def delete_authors(self, arg: Sequence[DeleteAuthorsParams]) -> None:
-        if not arg:
+    def delete_authors(self, *, args: Sequence[DeleteAuthorsParams]) -> None:
+        if not args:
             return None
-        self._conn.execute(sqlalchemy.text(DELETE_AUTHORS), [{"p1": a.id} for a in arg])
+        self._conn.execute(sqlalchemy.text(DELETE_AUTHORS), [{"p1": a.id} for a in args])
 
 
 class AsyncQuerier:
@@ -56,12 +56,12 @@ class AsyncQuerier:
     def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
-    async def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> None:
-        if not arg:
+    async def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> None:
+        if not args:
             return None
-        await self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in arg])
+        await self._conn.execute(sqlalchemy.text(CREATE_AUTHORS), [{"p1": a.name, "p2": a.bio} for a in args])
 
-    async def delete_authors(self, arg: Sequence[DeleteAuthorsParams]) -> None:
-        if not arg:
+    async def delete_authors(self, *, args: Sequence[DeleteAuthorsParams]) -> None:
+        if not args:
             return None
-        await self._conn.execute(sqlalchemy.text(DELETE_AUTHORS), [{"p1": a.id} for a in arg])
+        await self._conn.execute(sqlalchemy.text(DELETE_AUTHORS), [{"p1": a.id} for a in args])
