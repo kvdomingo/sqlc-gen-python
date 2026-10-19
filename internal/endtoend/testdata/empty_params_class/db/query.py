@@ -37,13 +37,13 @@ class Querier:
     def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
-    def count_authors(self, arg: CountAuthorsParams) -> Optional[int]:
+    def count_authors(self, *, arg: CountAuthorsParams) -> Optional[int]:
         row = self._conn.execute(sqlalchemy.text(COUNT_AUTHORS)).first()
         if row is None:
             return None
         return cast(int, row[0])
 
-    def list_authors(self, arg: ListAuthorsParams) -> Iterator[models.Author]:
+    def list_authors(self, *, arg: ListAuthorsParams) -> Iterator[models.Author]:
         result = self._conn.execute(sqlalchemy.text(LIST_AUTHORS))
         for row in result:
             yield models.Author(

@@ -19,7 +19,7 @@ async def test_ondeck(async_db: sqlalchemy.ext.asyncio.AsyncConnection):
     city = await city_querier.create_city(slug="san-francisco", name="San Francisco")
     assert city is not None
 
-    venue_id = await venue_querier.create_venue(venue_queries.CreateVenueParams(
+    venue_id = await venue_querier.create_venue(arg=venue_queries.CreateVenueParams(
         slug="the-fillmore",
         name="The Fillmore",
         city=city.slug,

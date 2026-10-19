@@ -18,7 +18,7 @@ async def test_books(async_db: sqlalchemy.ext.asyncio.AsyncConnection):
     assert author is not None
 
     now = datetime.datetime.now()
-    await querier.create_book(query.CreateBookParams(
+    await querier.create_book(arg=query.CreateBookParams(
         author_id=author.author_id,
         isbn="1",
         title="my book title",
@@ -28,7 +28,7 @@ async def test_books(async_db: sqlalchemy.ext.asyncio.AsyncConnection):
         tags=[],
     ))
 
-    b1 = await querier.create_book(query.CreateBookParams(
+    b1 = await querier.create_book(arg=query.CreateBookParams(
         author_id=author.author_id,
         isbn="2",
         title="the second book",
@@ -40,7 +40,7 @@ async def test_books(async_db: sqlalchemy.ext.asyncio.AsyncConnection):
 
     await querier.update_book(book_id=b1.book_id, title="changed second title", tags=["cool", "disastor"])
 
-    b3 = await querier.create_book(query.CreateBookParams(
+    b3 = await querier.create_book(arg=query.CreateBookParams(
         author_id=author.author_id,
         isbn="3",
         title="the third book",
@@ -50,7 +50,7 @@ async def test_books(async_db: sqlalchemy.ext.asyncio.AsyncConnection):
         tags=["cool"],
     ))
 
-    b4 = await querier.create_book(query.CreateBookParams(
+    b4 = await querier.create_book(arg=query.CreateBookParams(
         author_id=author.author_id,
         isbn="4",
         title="4th place finisher",

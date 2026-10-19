@@ -41,18 +41,18 @@ async def aq(async_db: sqlalchemy.ext.asyncio.AsyncConnection) -> query.AsyncQue
 
 def test_copyfrom_and_batchexec_use_one_executemany(db, q):
     log = StatementLog(db)
-    assert q.create_authors([]) == 0
-    q.create_books([])
+    assert q.create_authors(args=[]) == 0
+    q.create_books(args=[])
     assert log.statements == []
 
-    count = q.create_authors([
+    count = q.create_authors(args=[
         query.CreateAuthorsParams(name="Ursula", bio=None),
         query.CreateAuthorsParams(name="Octavia", bio="Kindred"),
     ])
     assert count == 2
     authors = {a.name: a for a in q.list_authors()}
     log.statements.clear()
-    q.create_books([
+    q.create_books(args=[
         query.CreateBooksParams(author_id=authors["Ursula"].id, title="The Dispossessed", status=models.BookStatus.IN_PRINT),
         query.CreateBooksParams(author_id=authors["Octavia"].id, title="Kindred", status=models.BookStatus.DRAFT),
     ])
@@ -65,7 +65,7 @@ def test_batchone_is_lazy_and_ordered(db, q):
     assert a is not None and b is not None
     log = StatementLog(db)
 
-    results = q.get_authors_by_id([
+    results = q.get_authors_by_id(args=[
         query.GetAuthorsByIDParams(id=a.id),
         query.GetAuthorsByIDParams(id=-1),
         query.GetAuthorsByIDParams(id=b.id),
@@ -84,7 +84,7 @@ def test_batchmany_yields_a_list_per_input(q):
     first = q.create_book(author_id=a.id, title="The Dispossessed")
     second = q.create_book(author_id=a.id, title="The Lathe of Heaven")
 
-    results = list(q.list_books_by_author([
+    results = list(q.list_books_by_author(args=[
         query.ListBooksByAuthorParams(author_id=a.id),
         query.ListBooksByAuthorParams(author_id=b.id),
     ]))
@@ -134,11 +134,11 @@ def test_typed_errors(db, q):
 
     with pytest.raises(errors.QueryError):
         with db.begin_nested():
-            q.create_authors([query.CreateAuthorsParams(name="Ursula", bio=None)])
+            q.create_authors(args=[query.CreateAuthorsParams(name="Ursula", bio=None)])
 
 
 def test_error_while_iterating_is_wrapped(db, q):
-    results = q.insert_authors_returning([
+    results = q.insert_authors_returning(args=[
         query.InsertAuthorsReturningParams(name="Ursula"),
         query.InsertAuthorsReturningParams(name="Ursula"),
     ])
@@ -155,7 +155,7 @@ async def test_async_error_while_iterating_is_wrapped(async_db, aq):
     names = [query.InsertAuthorsReturningParams(name="Ursula")] * 2
     with pytest.raises(errors.UniqueViolationError):
         async with async_db.begin_nested():
-            async for _ in aq.insert_authors_returning(names):
+            async for _ in aq.insert_authors_returning(args=names):
                 pass
 
 
@@ -163,17 +163,17 @@ def test_other_errors_pass_through(db, q):
     with pytest.raises(sqlalchemy.exc.ProgrammingError):
         with db.begin_nested():
             db.execute(sqlalchemy.text("DROP TABLE books"))
-            list(q.list_books_by_author([query.ListBooksByAuthorParams(author_id=1)]))
+            list(q.list_books_by_author(args=[query.ListBooksByAuthorParams(author_id=1)]))
 
 
 async def test_async_batches_and_errors(async_db, aq):
     a = await aq.create_author(name="Ursula", bio=None)
     assert a is not None
-    assert await aq.create_authors([query.CreateAuthorsParams(name="Octavia", bio=None)]) == 1
+    assert await aq.create_authors(args=[query.CreateAuthorsParams(name="Octavia", bio=None)]) == 1
 
-    found = [x async for x in aq.get_authors_by_id([query.GetAuthorsByIDParams(id=a.id), query.GetAuthorsByIDParams(id=-1)])]
+    found = [x async for x in aq.get_authors_by_id(args=[query.GetAuthorsByIDParams(id=a.id), query.GetAuthorsByIDParams(id=-1)])]
     assert found == [a, None]
-    books = [x async for x in aq.list_books_by_author([query.ListBooksByAuthorParams(author_id=a.id)])]
+    books = [x async for x in aq.list_books_by_author(args=[query.ListBooksByAuthorParams(author_id=a.id)])]
     assert books == [[]]
 
     with pytest.raises(errors.UniqueViolationError) as unique:
@@ -183,7 +183,7 @@ async def test_async_batches_and_errors(async_db, aq):
 
     with pytest.raises(errors.ForeignKeyViolationError) as fk:
         async with async_db.begin_nested():
-            await aq.create_books([query.CreateBooksParams(author_id=-1, title="Orphan", status=models.BookStatus.DRAFT)])
+            await aq.create_books(args=[query.CreateBooksParams(author_id=-1, title="Orphan", status=models.BookStatus.DRAFT)])
     assert fk.value.constraint_name == "books_author_id_fkey"
 
     with pytest.raises(errors.NotNullViolationError):
@@ -197,9 +197,9 @@ def test_session_backed_querier(db):
         q = query.Querier(session)
         a = q.create_author(name="Ursula", bio=None)
         assert a is not None
-        assert q.create_authors([query.CreateAuthorsParams(name="Octavia", bio=None)]) == 1
+        assert q.create_authors(args=[query.CreateAuthorsParams(name="Octavia", bio=None)]) == 1
         assert [x.name for x in q.list_authors()] == ["Octavia", "Ursula"]
-        assert list(q.get_authors_by_id([query.GetAuthorsByIDParams(id=a.id)])) == [a]
+        assert list(q.get_authors_by_id(args=[query.GetAuthorsByIDParams(id=a.id)])) == [a]
 
 
 class FakeQuerier:
@@ -217,12 +217,12 @@ class FakeQuerier:
     def list_authors(self) -> Iterator[models.Author]:
         yield from sorted(self.authors.values(), key=lambda a: a.name)
 
-    def create_authors(self, arg: Sequence[query.CreateAuthorsParams]) -> int:
-        for a in arg:
+    def create_authors(self, *, args: Sequence[query.CreateAuthorsParams]) -> int:
+        for a in args:
             self.create_author(name=a.name, bio=a.bio)
-        return len(arg)
+        return len(args)
 
-    def create_books(self, arg: Sequence[query.CreateBooksParams]) -> None:
+    def create_books(self, *, args: Sequence[query.CreateBooksParams]) -> None:
         raise NotImplementedError
 
     def create_book(self, *, author_id: int, title: str) -> Optional[models.Book]:
@@ -231,18 +231,18 @@ class FakeQuerier:
     def set_book_title(self, *, id: int, title: str) -> None:
         raise NotImplementedError
 
-    def get_authors_by_id(self, arg: Sequence[query.GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
-        for a in arg:
+    def get_authors_by_id(self, *, args: Sequence[query.GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
+        for a in args:
             yield self.authors.get(a.id)
 
-    def list_books_by_author(self, arg: Sequence[query.ListBooksByAuthorParams]) -> Iterator[List[models.Book]]:
-        for _ in arg:
+    def list_books_by_author(self, *, args: Sequence[query.ListBooksByAuthorParams]) -> Iterator[List[models.Book]]:
+        for _ in args:
             yield []
 
     def get_book_with_author(self, *, id: int) -> Optional[query.GetBookWithAuthorRow]:
         return None
 
-    def insert_authors_returning(self, arg: Sequence[query.InsertAuthorsReturningParams]) -> Iterator[Optional[models.Author]]:
+    def insert_authors_returning(self, *, args: Sequence[query.InsertAuthorsReturningParams]) -> Iterator[Optional[models.Author]]:
         raise NotImplementedError
 
 
@@ -252,7 +252,7 @@ def author_names(q: query.QuerierProtocol) -> List[str]:
 
 def test_fake_satisfies_protocol():
     fake = FakeQuerier()
-    fake.create_authors([query.CreateAuthorsParams(name="b", bio=None), query.CreateAuthorsParams(name="a", bio=None)])
+    fake.create_authors(args=[query.CreateAuthorsParams(name="b", bio=None), query.CreateAuthorsParams(name="a", bio=None)])
     assert author_names(fake) == ["a", "b"]
 
 

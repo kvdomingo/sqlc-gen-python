@@ -66,7 +66,7 @@ class Querier:
     def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
-    def cast_aliases(self, arg: CastAliasesParams) -> Optional[CastAliasesRow]:
+    def cast_aliases(self, *, arg: CastAliasesParams) -> Optional[CastAliasesRow]:
         row = self._conn.execute(sqlalchemy.text(CAST_ALIASES), {
             "p1": arg.column_1,
             "p2": arg.column_2,

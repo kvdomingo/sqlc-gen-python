@@ -21,8 +21,8 @@ def sync(conn: sqlalchemy.engine.Connection, session: sqlalchemy.orm.Session) ->
         return
     if created is not None:
         assert_type(created.created_at, pydantic.AwareDatetime)
-    found: Iterator[models.Author | None] = q.get_authors_by_id([query.GetAuthorsByIDParams(id=1)])
-    books: Iterator[list[models.Book]] = q.list_books_by_author([query.ListBooksByAuthorParams(author_id=1)])
+    found: Iterator[models.Author | None] = q.get_authors_by_id(args=[query.GetAuthorsByIDParams(id=1)])
+    books: Iterator[list[models.Book]] = q.list_books_by_author(args=[query.ListBooksByAuthorParams(author_id=1)])
     status: models.BookStatus = models.BookStatus.OUT_OF_PRINT
 
 
@@ -30,6 +30,6 @@ async def asynchronous(session: sqlalchemy.ext.asyncio.AsyncSession) -> None:
     q = query.AsyncQuerier(session)
     assert_type(q._conn, sqlalchemy.ext.asyncio.AsyncSession)
     p: query.AsyncQuerierProtocol = q
-    async for books in q.list_books_by_author([query.ListBooksByAuthorParams(author_id=1)]):
+    async for books in q.list_books_by_author(args=[query.ListBooksByAuthorParams(author_id=1)]):
         for b in books:
             print(b.title, b.from_)
