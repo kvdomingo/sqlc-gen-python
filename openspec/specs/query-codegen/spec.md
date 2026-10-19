@@ -50,24 +50,45 @@ line, in order. Queries without comments SHALL produce no docstring.
 
 A `:copyfrom` query SHALL generate a params class holding every query parameter,
 even when there are fewer parameters than `query_parameter_limit`. The sync and
-async querier methods SHALL take one positional argument, a `Sequence` of that
-params class. Each method SHALL run the statement once over all the items as a
-single `executemany` call and return the driver-reported row count as `int`.
-Generation SHALL no longer fail for `:copyfrom`.
+async querier methods SHALL take one keyword-only argument named `args`, a
+`Sequence` of that params class. Each method SHALL run the statement once over
+all the items as a single `executemany` call and return the driver-reported row
+count as `int`. Generation SHALL no longer fail for `:copyfrom`.
 
 #### Scenario: Bulk insert
 
 - **WHEN** a query is `-- name: CreateAuthors :copyfrom` with
   `INSERT INTO authors (name, bio) VALUES ($1, $2)`
 - **THEN** the querier has
-  `def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> int` (and an
-  `async def` form), which passes a list of parameter dicts, one per item, to a
-  single `execute` call
+  `def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> int`
+  (and an `async def` form), which passes a list of parameter dicts, one per
+  item, to a single `execute` call
 
 #### Scenario: Empty input
 
-- **WHEN** `create_authors` is called with an empty sequence
+- **WHEN** `create_authors` is called with `args=[]`
 - **THEN** it returns `0` without running the statement
+
+### Requirement: Params-class argument
+
+When a non-sequence query's parameters are packed into a params class (more
+parameters than `query_parameter_limit`, or `query_parameter_limit: 0`), the
+sync and async querier methods and protocol methods SHALL take that params
+class as one keyword-only argument named `arg`.
+
+#### Scenario: Over the limit
+
+- **WHEN** `query_parameter_limit: 2` and `UpdateAuthor :exec` has three
+  parameters
+- **THEN** the querier has
+  `def update_author(self, *, arg: UpdateAuthorParams) -> None`, and calling
+  `q.update_author(UpdateAuthorParams(...))` positionally is a `TypeError`
+
+#### Scenario: Limit of zero
+
+- **WHEN** `query_parameter_limit: 0` and `GetAuthor :one` has one parameter
+- **THEN** the querier has
+  `def get_author(self, *, arg: GetAuthorParams) -> Optional[models.Author]`
 
 ### Requirement: Multi-dimensional arrays
 
@@ -183,8 +204,9 @@ models, and embedded models. It SHALL have no runtime effect.
 
 A `:batchone`, `:batchmany`, or `:batchexec` query SHALL generate a params class
 holding every query parameter, as `:copyfrom` does, whatever
-`query_parameter_limit` is. Each method SHALL take one positional argument, a
-`Sequence` of that params class. An empty sequence SHALL run no statements.
+`query_parameter_limit` is. Each method SHALL take one keyword-only argument
+named `args`, a `Sequence` of that params class. An empty sequence SHALL run no
+statements.
 
 `:batchexec` SHALL run the statement once as a single `executemany` over all
 items, and SHALL return `None` (awaitable on `AsyncQuerier`).
@@ -228,6 +250,13 @@ spelling. Generated code SHALL spell them in the active type syntax
   objects
 - **THEN** the method makes one `execute` call with a list of two parameter
   dicts, and returns `None` once both rows are written
+
+#### Scenario: Keyword-only args
+
+- **WHEN** a `:batchexec` query `CreateAuthors` is generated
+- **THEN** the method signature is
+  `def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> None`,
+  and passing the sequence positionally is a `TypeError`
 
 ### Requirement: Querier protocols
 

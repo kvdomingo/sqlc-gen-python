@@ -151,7 +151,7 @@ class AsyncQuerier:
             name=cast(str, row[1]),
         )
 
-    async def create_book(self, arg: CreateBookParams) -> Optional[models.Book]:
+    async def create_book(self, *, arg: CreateBookParams) -> Optional[models.Book]:
         row = (await self._conn.execute(sqlalchemy.text(CREATE_BOOK), {
             "p1": arg.author_id,
             "p2": arg.isbn,

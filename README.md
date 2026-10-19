@@ -67,7 +67,7 @@ asyncpg). Some options raise the minimum Python version; see each option.
 | `emit_str_enum` | `false` | `enum.StrEnum` (Python 3.11+) instead of `(str, enum.Enum)` |
 | `emit_exact_table_names` | `false` | Don't singularize table names for model classes |
 | `inflection_exclude_table_names` | `[]` | Table names never singularized |
-| `query_parameter_limit` | `4` | Params above this become a params class; `0` always uses one |
+| `query_parameter_limit` | `4` | Params above this become a keyword-only `arg` params class; `0` always uses one |
 | `emit_modern_types` | `false` | `X \| None`, `list[X]`, `collections.abc` (Python 3.10+) |
 | `emit_generic_querier` | `false` | PEP 695 generic queriers (Python 3.12+) |
 | `emit_aware_datetime` | `false` | `timestamptz` as `pydantic.AwareDatetime` (needs `emit_pydantic_models`) |
@@ -177,7 +177,8 @@ class Querier[_ConnT: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session
 Commands: `:copyfrom`, `:batchexec`, `:batchone`, `:batchmany`
 
 All four always generate a params class, whatever `query_parameter_limit` is,
-and take one positional `Sequence` of it. An empty sequence runs nothing.
+and take it as a keyword-only `args: Sequence[Params]`. An empty sequence runs
+nothing.
 
 - `:copyfrom` runs a single `executemany` and returns the row count, as
   reported by the driver (some report `-1`).
@@ -203,12 +204,12 @@ class CreateAuthorsParams:
 class Querier:
     # ...
 
-    def create_authors(self, arg: Sequence[CreateAuthorsParams]) -> None:
-        if not arg:
+    def create_authors(self, *, args: Sequence[CreateAuthorsParams]) -> None:
+        if not args:
             return None
         self._conn.execute(
             sqlalchemy.text(CREATE_AUTHORS),
-            [{"p1": a.name, "p2": a.bio} for a in arg],
+            [{"p1": a.name, "p2": a.bio} for a in args],
         )
 ```
 
@@ -474,15 +475,18 @@ Leaves the `# versions:` / `#   sqlc vX.Y.Z` lines out of file headers.
   unchanged and new behaviour is opt-in. Expect diffs where upstream produced
   invalid code (keyword names, empty classes, enum names) or `Any`
   (`varchar`, `timestamp`, …), plus the annotation-only `cast()` and
-  `_conn: Union[...]` changes.
+  `_conn: Union[...]` changes. Params-class methods take a keyword-only
+  `arg=` instead of a positional argument.
 - From [asavoy/alt-sqlc-gen-python][asavoy]:
   - Set `emit_modern_types`, `emit_aware_datetime` and `emit_generic_querier`
     to get its output style; here they are opt-in.
   - `emit_query_errors` keeps the same class names, constructor, `query_name`
     and `cause`; `constraint_name` is new.
   - `overrides` accepts its `py_type` + `py_import` form unchanged.
-  - `:batchexec` takes one positional `arg: Sequence[Params]` instead of a
-    keyword-only `args: list[Params]`.
+  - `:batchexec` (like `:copyfrom`, `:batchone` and `:batchmany`) takes a
+    keyword-only `args: Sequence[Params]` instead of `args: list[Params]`.
+  - Other params-class methods take a keyword-only `arg=` instead of a
+    positional argument.
 
 ## Development
 

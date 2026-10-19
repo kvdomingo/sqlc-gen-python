@@ -97,7 +97,7 @@ class AsyncQuerier:
     def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
-    async def create_venue(self, arg: CreateVenueParams) -> Optional[int]:
+    async def create_venue(self, *, arg: CreateVenueParams) -> Optional[int]:
         row = (await self._conn.execute(sqlalchemy.text(CREATE_VENUE), {
             "p1": arg.slug,
             "p2": arg.name,

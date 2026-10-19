@@ -16,11 +16,11 @@ class FakeQuerier:
     def __init__(self) -> None:
         self.authors: dict[int, models.Author] = {}
 
-    def create_authors(self, arg: Sequence[query.CreateAuthorsParams]) -> int:
-        for a in arg:
+    def create_authors(self, *, args: Sequence[query.CreateAuthorsParams]) -> int:
+        for a in args:
             id = len(self.authors) + 1
             self.authors[id] = models.Author(id=id, name=a.name, bio=a.bio)
-        return len(arg)
+        return len(args)
 
     def delete_author(self, *, id: int) -> None:
         self.authors.pop(id, None)
@@ -28,15 +28,15 @@ class FakeQuerier:
     def get_author(self, *, id: int) -> Optional[models.Author]:
         return self.authors.get(id)
 
-    def get_authors_by_id(self, arg: Sequence[query.GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
-        for a in arg:
+    def get_authors_by_id(self, *, args: Sequence[query.GetAuthorsByIDParams]) -> Iterator[Optional[models.Author]]:
+        for a in args:
             yield self.authors.get(a.id)
 
     def list_authors(self) -> Iterator[models.Author]:
         yield from self.authors.values()
 
-    def list_books_by_author(self, arg: Sequence[query.ListBooksByAuthorParams]) -> Iterator[list[models.Book]]:
-        for _ in arg:
+    def list_books_by_author(self, *, args: Sequence[query.ListBooksByAuthorParams]) -> Iterator[list[models.Book]]:
+        for _ in args:
             yield []
 
 

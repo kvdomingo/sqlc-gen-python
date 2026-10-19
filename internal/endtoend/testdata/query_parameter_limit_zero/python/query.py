@@ -39,11 +39,11 @@ class Querier:
     def __init__(self, conn: Union[sqlalchemy.engine.Connection, sqlalchemy.orm.Session]):
         self._conn = conn
 
-    def delete_bar_by_id(self, arg: DeleteBarByIDParams) -> int:
+    def delete_bar_by_id(self, *, arg: DeleteBarByIDParams) -> int:
         result = self._conn.execute(sqlalchemy.text(DELETE_BAR_BY_ID), {"p1": arg.id})
         return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
 
-    def delete_bar_by_id_and_name(self, arg: DeleteBarByIDAndNameParams) -> int:
+    def delete_bar_by_id_and_name(self, *, arg: DeleteBarByIDAndNameParams) -> int:
         result = self._conn.execute(sqlalchemy.text(DELETE_BAR_BY_ID_AND_NAME), {"p1": arg.id, "p2": arg.name})
         return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
 
@@ -54,10 +54,10 @@ class AsyncQuerier:
     def __init__(self, conn: Union[sqlalchemy.ext.asyncio.AsyncConnection, sqlalchemy.ext.asyncio.AsyncSession]):
         self._conn = conn
 
-    async def delete_bar_by_id(self, arg: DeleteBarByIDParams) -> int:
+    async def delete_bar_by_id(self, *, arg: DeleteBarByIDParams) -> int:
         result = await self._conn.execute(sqlalchemy.text(DELETE_BAR_BY_ID), {"p1": arg.id})
         return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount
 
-    async def delete_bar_by_id_and_name(self, arg: DeleteBarByIDAndNameParams) -> int:
+    async def delete_bar_by_id_and_name(self, *, arg: DeleteBarByIDAndNameParams) -> int:
         result = await self._conn.execute(sqlalchemy.text(DELETE_BAR_BY_ID_AND_NAME), {"p1": arg.id, "p2": arg.name})
         return cast("sqlalchemy.engine.CursorResult[Any]", result).rowcount

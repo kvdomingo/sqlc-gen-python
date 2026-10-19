@@ -112,22 +112,14 @@ func takesSequence(cmd string) bool {
 }
 
 func (q Query) addArgs(f *pyFile, args *pyast.Arguments) {
-	// A single struct arg does not need to be passed as a keyword argument
-	if len(q.Args) == 1 && q.Args[0].IsStruct() {
-		ann := q.Args[0].annotation(f)
-		if takesSequence(q.Cmd) {
+	for _, a := range q.Args {
+		ann := a.annotation(f)
+		if a.IsStruct() && takesSequence(q.Cmd) {
 			ann = f.generic("Sequence", ann)
 		}
-		args.Args = append(args.Args, &pyast.Arg{
-			Arg:        q.Args[0].Name,
-			Annotation: ann,
-		})
-		return
-	}
-	for _, a := range q.Args {
 		args.KwOnlyArgs = append(args.KwOnlyArgs, &pyast.Arg{
 			Arg:        a.Name,
-			Annotation: a.annotation(f),
+			Annotation: ann,
 		})
 	}
 }
@@ -452,6 +444,10 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 			return nil, errors.New("invalid query parameter limit")
 		}
 		if len(query.Params) > qpl || qpl == 0 || takesSequence(query.Cmd) {
+			name := "arg"
+			if takesSequence(query.Cmd) {
+				name = "args"
+			}
 			var cols []pyColumn
 			for _, p := range query.Params {
 				cols = append(cols, pyColumn{
@@ -461,7 +457,7 @@ func buildQueries(conf Config, req *plugin.GenerateRequest, structs []Struct) ([
 			}
 			gq.Args = []QueryValue{{
 				Emit:   true,
-				Name:   "arg",
+				Name:   name,
 				Struct: columnsToStruct(req, conf, query.Name+"Params", cols, structs),
 			}}
 		} else {
@@ -924,13 +920,13 @@ func isNone(name string) *pyast.Node {
 }
 
 // sequenceParams is the executemany parameter list for a sequence-taking
-// command: one dict per item of arg.
+// command: one dict per item of the sequence argument.
 func sequenceParams(q Query) *pyast.Node {
 	dict := q.argDictNode("a")
 	if dict == nil {
 		dict = poet.Node(&pyast.Dict{})
 	}
-	return poet.ListComp(dict, poet.Name("a"), poet.Name("arg"))
+	return poet.ListComp(dict, poet.Name("a"), poet.Name(q.Args[0].Name))
 }
 
 func (b *querierBuilder) method(q Query) (querierMethod, error) {
@@ -981,7 +977,7 @@ func (b *querierBuilder) method(q Query) (querierMethod, error) {
 	case metadata.CmdCopyFrom:
 		body = append(body,
 			poet.Node(&pyast.If{
-				Test: poet.Not(poet.Name("arg")),
+				Test: poet.Not(poet.Name(q.Args[0].Name)),
 				Body: []*pyast.Node{poet.Return(poet.Constant(0))},
 			}),
 			assignNode("result", b.execute(q, sequenceParams(q))),
@@ -991,7 +987,7 @@ func (b *querierBuilder) method(q Query) (querierMethod, error) {
 	case metadata.CmdBatchExec:
 		body = append(body,
 			poet.Node(&pyast.If{
-				Test: poet.Not(poet.Name("arg")),
+				Test: poet.Not(poet.Name(q.Args[0].Name)),
 				Body: []*pyast.Node{poet.Return(poet.Constant(nil))},
 			}),
 			b.execute(q, sequenceParams(q)),
@@ -1000,7 +996,7 @@ func (b *querierBuilder) method(q Query) (querierMethod, error) {
 	case metadata.CmdBatchOne:
 		body = append(body, poet.Node(&pyast.For{
 			Target: poet.Name("a"),
-			Iter:   poet.Name("arg"),
+			Iter:   poet.Name(q.Args[0].Name),
 			Body: []*pyast.Node{
 				assignNode("row", poet.Node(&pyast.Call{
 					Func: poet.Attribute(b.execute(q, q.argDictNode("a")), "first"),
@@ -1017,7 +1013,7 @@ func (b *querierBuilder) method(q Query) (querierMethod, error) {
 	case metadata.CmdBatchMany:
 		body = append(body, poet.Node(&pyast.For{
 			Target: poet.Name("a"),
-			Iter:   poet.Name("arg"),
+			Iter:   poet.Name(q.Args[0].Name),
 			Body: []*pyast.Node{
 				poet.Expr(poet.Yield(poet.ListComp(
 					b.rowNode(q.Ret, "row"),
